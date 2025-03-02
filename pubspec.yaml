@@ -1,0 +1,97 @@
+# pubspec.yaml
+name: qlz_flash_cards_ui
+description: Flash Cards Application with Clean Architecture
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # UI Packages
+  cupertino_icons: ^1.0.6
+  flutter_svg: ^2.0.9
+  cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
+  flutter_screenutil: ^5.9.0
+  google_fonts: ^6.1.0
+
+  # State Management
+  flutter_bloc: ^8.1.3
+  equatable: ^2.0.5
+
+  # Network
+  dio: ^5.4.0
+  pretty_dio_logger: ^1.3.1
+  connectivity_plus: ^5.0.2
+
+  # Local Storage
+  shared_preferences: ^2.2.2
+  flutter_secure_storage: ^9.0.0
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # Data Handling
+  freezed_annotation: ^2.4.1
+  json_annotation: ^4.8.1
+  intl: 0.19.0
+
+  # Utilities
+  logger: ^2.0.2
+  url_launcher: ^6.2.2
+  package_info_plus: ^5.0.1
+  device_info_plus: ^9.1.1
+  permission_handler: ^11.1.0
+  image_picker: ^1.0.7
+  path_provider: ^2.1.2
+
+  # Firebase (Uncomment if needed)
+  # firebase_core: ^2.24.2
+  # firebase_auth: ^4.16.0
+  # firebase_messaging: ^14.7.10
+  # firebase_analytics: ^10.8.0
+  # cloud_firestore: ^4.14.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Linting
+  flutter_lints: ^3.0.1
+  very_good_analysis: ^5.1.0
+
+  # Code Generation
+  build_runner: ^2.4.7
+  freezed: ^2.4.6
+  json_serializable: ^6.7.1
+  hive_generator: ^2.0.1
+
+  # Testing
+  mocktail: ^1.0.2
+  bloc_test: ^9.1.5
+
+flutter:
+  uses-material-design: true
+
+  # Assets
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/fonts/
+
+  # Fonts (Uncomment and modify as needed)
+  # fonts:
+  #   - family: CustomFont
+  #     fonts:
+  #       - asset: assets/fonts/CustomFont-Regular.ttf
+  #       - asset: assets/fonts/CustomFont-Bold.ttf
+  #         weight: 700
+
+# dart run build_runner commands:
+# - Watch: dart run build_runner watch
+# - Build: dart run build_runner build
+# - Clean: dart run build_runner clean

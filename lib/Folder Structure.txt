@@ -1,0 +1,96 @@
+D:\Work\workspace\qlz_flash_cards_ui\lib
+│   main.dart
+│
+├───config
+│       app_colors.dart
+│       app_config.dart
+│       app_theme.dart
+│
+├───core
+│   ├───api
+│   │       api_error.dart
+│   │       api_provider.dart
+│   │       endpoints.dart
+│   │       network_error.dart
+│   │
+│   ├───routes
+│   │       app_routes.dart
+│   │
+│   └───utils
+│           helpers.dart
+│           validators.dart
+│
+├───features
+│   ├───auth
+│   │   ├───cubit
+│   │   │       auth_cubit.dart
+│   │   │       auth_state.dart
+│   │   │
+│   │   ├───screens
+│   │   │       login_screen.dart
+│   │   │       register_screen.dart
+│   │   │
+│   │   └───widgets
+│   │           login_form.dart
+│   │
+│   ├───home
+│   │   ├───cubit
+│   │   ├───screens
+│   │   │       home_screen.dart
+│   │   │
+│   │   └───widgets
+│   └───screens
+│       │   welcome_screen.dart
+│       │
+│       ├───auth
+│       │       forgot_password_screen.dart
+│       │       login_screen.dart
+│       │       register_screen.dart
+│       │
+│       ├───folder
+│       │       folder_detail_screen.dart
+│       │
+│       ├───home
+│       │   │   home_screen.dart
+│       │   │
+│       │   └───tabs
+│       │           home_tab.dart
+│       │           solutions_tab.dart
+│       │
+│       ├───library
+│       │       library_screen.dart
+│       │
+│       ├───module
+│       │       module_detail_screen.dart
+│       │
+│       ├───profile
+│       │       profile_screen.dart
+│       │
+│       ├───quiz
+│       │       quiz_screen.dart
+│       │
+│       └───study
+│               flashcard_screen.dart
+│
+├───models
+│       user.dart
+│
+└───shared
+    ├───constants
+    │       strings.dart
+    │
+    └───widgets
+        ├───buttons
+        │       qlz_button.dart
+        │
+        ├───fields
+        │       qlz_text_field.dart
+        │
+        ├───layout
+        │       qlz_card.dart
+        │
+        ├───quiz
+        │       qlz_quiz_option.dart
+        │
+        └───study
+                qlz_flashcard.dart
