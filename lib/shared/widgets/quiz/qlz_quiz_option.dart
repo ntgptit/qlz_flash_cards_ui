@@ -3,6 +3,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 
 /// Represents the state of a quiz option
 sealed class QlzQuizOptionState {
@@ -61,10 +62,7 @@ final class QlzQuizOption extends StatelessWidget {
         onTap: isDisabled ? null : onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
@@ -107,14 +105,11 @@ final class QlzQuizOption extends StatelessWidget {
   }
 
   Color _getBorderColor(ThemeData theme) => switch (state) {
-        QlzQuizOptionState.idle => theme.dividerColor,
-        QlzQuizOptionState.selected => theme.colorScheme.primary,
-        QlzQuizOptionState.correct => theme.colorScheme.secondary,
-        QlzQuizOptionState.incorrect => theme.colorScheme.error,
-        _QlzQuizOptionStateIdle() => throw UnimplementedError(),
-        _QlzQuizOptionStateSelected() => throw UnimplementedError(),
-        _QlzQuizOptionStateCorrect() => throw UnimplementedError(),
-        _QlzQuizOptionStateIncorrect() => throw UnimplementedError(),
+        QlzQuizOptionState.idle => AppColors.darkBorder, // Sử dụng darkBorder cho trạng thái mặc định
+        QlzQuizOptionState.selected => AppColors.primary, // Màu xanh chính cho lựa chọn
+        QlzQuizOptionState.correct => AppColors.success, // Xanh lá cho đúng
+        QlzQuizOptionState.incorrect => AppColors.error, // Đỏ cho sai
+        _ => throw UnimplementedError(),
       };
 
   double _getBorderWidth() => switch (state) {
@@ -122,70 +117,47 @@ final class QlzQuizOption extends StatelessWidget {
         QlzQuizOptionState.selected => 2.0,
         QlzQuizOptionState.correct => 2.0,
         QlzQuizOptionState.incorrect => 2.0,
-        _QlzQuizOptionStateIdle() => throw UnimplementedError(),
-        _QlzQuizOptionStateSelected() => throw UnimplementedError(),
-        _QlzQuizOptionStateCorrect() => throw UnimplementedError(),
-        _QlzQuizOptionStateIncorrect() => throw UnimplementedError(),
+        _ => throw UnimplementedError(),
       };
 
   Color _getBackgroundColor(ThemeData theme) => switch (state) {
-        QlzQuizOptionState.idle => theme.cardColor,
-        QlzQuizOptionState.selected =>
-          theme.colorScheme.primary.withOpacity(0.1),
-        QlzQuizOptionState.correct =>
-          theme.colorScheme.secondary.withOpacity(0.1),
-        QlzQuizOptionState.incorrect =>
-          theme.colorScheme.error.withOpacity(0.1),
-        _QlzQuizOptionStateIdle() => throw UnimplementedError(),
-        _QlzQuizOptionStateSelected() => throw UnimplementedError(),
-        _QlzQuizOptionStateCorrect() => throw UnimplementedError(),
-        _QlzQuizOptionStateIncorrect() => throw UnimplementedError(),
+        QlzQuizOptionState.idle => AppColors.darkCard, // Màu nền thẻ tối
+        QlzQuizOptionState.selected => AppColors.primary.withOpacity(0.1), // Nhẹ nhàng khi chọn
+        QlzQuizOptionState.correct => AppColors.success.withOpacity(0.1), // Nhẹ nhàng khi đúng
+        QlzQuizOptionState.incorrect => AppColors.error.withOpacity(0.1), // Nhẹ nhàng khi sai
+        _ => throw UnimplementedError(),
       };
 
   Color _getTextColor(ThemeData theme) => switch (state) {
-        QlzQuizOptionState.idle =>
-          theme.textTheme.bodyLarge?.color ?? theme.colorScheme.onBackground,
-        QlzQuizOptionState.selected => theme.colorScheme.primary,
-        QlzQuizOptionState.correct => theme.colorScheme.secondary,
-        QlzQuizOptionState.incorrect => theme.colorScheme.error,
-        _QlzQuizOptionStateIdle() => throw UnimplementedError(),
-        _QlzQuizOptionStateSelected() => throw UnimplementedError(),
-        _QlzQuizOptionStateCorrect() => throw UnimplementedError(),
-        _QlzQuizOptionStateIncorrect() => throw UnimplementedError(),
+        QlzQuizOptionState.idle => AppColors.darkText, // Màu chữ trắng cho trạng thái mặc định
+        QlzQuizOptionState.selected => AppColors.primary, // Xanh chính khi chọn
+        QlzQuizOptionState.correct => AppColors.success, // Xanh lá khi đúng
+        QlzQuizOptionState.incorrect => AppColors.error, // Đỏ khi sai
+        _ => throw UnimplementedError(),
       };
 
   Color _getSubtextColor(ThemeData theme) => switch (state) {
-        QlzQuizOptionState.idle => theme.textTheme.bodySmall?.color ??
-            theme.colorScheme.onBackground.withOpacity(0.6),
-        QlzQuizOptionState.selected =>
-          theme.colorScheme.primary.withOpacity(0.8),
-        QlzQuizOptionState.correct =>
-          theme.colorScheme.secondary.withOpacity(0.8),
-        QlzQuizOptionState.incorrect =>
-          theme.colorScheme.error.withOpacity(0.8),
-        _QlzQuizOptionStateIdle() => throw UnimplementedError(),
-        _QlzQuizOptionStateSelected() => throw UnimplementedError(),
-        _QlzQuizOptionStateCorrect() => throw UnimplementedError(),
-        _QlzQuizOptionStateIncorrect() => throw UnimplementedError(),
+        QlzQuizOptionState.idle => AppColors.darkTextSecondary, // Màu phụ cho trạng thái mặc định
+        QlzQuizOptionState.selected => AppColors.primary.withOpacity(0.8), // Nhẹ hơn khi chọn
+        QlzQuizOptionState.correct => AppColors.success.withOpacity(0.8), // Nhẹ hơn khi đúng
+        QlzQuizOptionState.incorrect => AppColors.error.withOpacity(0.8), // Nhẹ hơn khi sai
+        _ => throw UnimplementedError(),
       };
 
   Widget _buildLeadingIcon(ThemeData theme) => switch (state) {
         QlzQuizOptionState.idle => const SizedBox.shrink(),
-        QlzQuizOptionState.selected => Icon(
+        QlzQuizOptionState.selected => const Icon(
             Icons.check_circle_outline,
-            color: theme.colorScheme.primary,
+            color: AppColors.primary, // Icon xanh khi chọn
           ),
-        QlzQuizOptionState.correct => Icon(
+        QlzQuizOptionState.correct => const Icon(
             Icons.check_circle,
-            color: theme.colorScheme.secondary,
+            color: AppColors.success, // Icon xanh lá khi đúng
           ),
-        QlzQuizOptionState.incorrect => Icon(
+        QlzQuizOptionState.incorrect => const Icon(
             Icons.cancel,
-            color: theme.colorScheme.error,
+            color: AppColors.error, // Icon đỏ khi sai
           ),
-        _QlzQuizOptionStateIdle() => throw UnimplementedError(),
-        _QlzQuizOptionStateSelected() => throw UnimplementedError(),
-        _QlzQuizOptionStateCorrect() => throw UnimplementedError(),
-        _QlzQuizOptionStateIncorrect() => throw UnimplementedError(),
+        _ => throw UnimplementedError(),
       };
 }

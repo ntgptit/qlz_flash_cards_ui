@@ -1,12 +1,19 @@
-import 'dart:async';
+// C:/Users/ntgpt/OneDrive/workspace/qlz_flash_cards_ui/lib/features/study/study_screen.dart
 import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
+import 'package:qlz_flash_cards_ui/features/study/controllers/study_screen_controller.dart';
 import 'package:qlz_flash_cards_ui/features/study/data/study_enums.dart';
 import 'package:qlz_flash_cards_ui/features/vocabulary/data/flashcard.dart';
-import 'package:qlz_flash_cards_ui/features/vocabulary/screens/vocabulary_screen.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/buttons/qlz_button.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/data_display/qlz_progress.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_empty_state.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/inputs/qlz_text_field.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/layout/qlz_modal.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/layout/qlz_screen.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/quiz/qlz_quiz_option.dart';
 
+// Widget chính
 class StudyScreen extends StatefulWidget {
   final List<Flashcard> flashcards;
   final String moduleName;
@@ -22,16 +29,14 @@ class StudyScreen extends StatefulWidget {
   });
 
   factory StudyScreen.fromArguments(Map<String, dynamic> arguments) {
-    final flashcards =
-        (arguments['flashcards'] as List?)?.cast<Flashcard>() ?? [];
-    final moduleName = arguments['moduleName'] as String? ?? 'Học phần';
+    final flashcards = (arguments['flashcards'] as List?)?.cast<Flashcard>() ?? [];
+    final moduleName = arguments['moduleName'] as String? ?? 'Module';
     final goal = arguments['goal'] != null
         ? StudyGoal.values.byName(arguments['goal'])
         : StudyGoal.quickStudy;
     final knowledgeLevel = arguments['knowledgeLevel'] != null
         ? KnowledgeLevel.values.byName(arguments['knowledgeLevel'])
         : KnowledgeLevel.allNew;
-
     return StudyScreen(
       flashcards: flashcards,
       moduleName: moduleName,
@@ -44,425 +49,468 @@ class StudyScreen extends StatefulWidget {
   State<StudyScreen> createState() => _StudyScreenState();
 }
 
+// State quản lý logic
 class _StudyScreenState extends State<StudyScreen> {
-  int _currentIndex = 0;
-  int _correctAnswers = 0;
-  int _totalAnswered = 0;
-  double _progress = 0.0;
-  String? _selectedAnswer;
-  bool _isAnswerSubmitted = false;
-  bool _isAnswerCorrect = false;
-  List<String> _options = [];
-  Timer? _autoNextTimer;
+  late final StudyScreenController _controller;
 
   @override
   void initState() {
     super.initState();
-    if (widget.flashcards.isNotEmpty) {
-      _setupQuestion();
-    }
+    _controller = StudyScreenController();
+    _controller.initialize(widget.flashcards);
   }
 
   @override
   void dispose() {
-    _autoNextTimer?.cancel();
+    _controller.dispose();
     super.dispose();
   }
 
-  void _setupQuestion() {
-    _selectedAnswer = null;
-    _isAnswerSubmitted = false;
-    _isAnswerCorrect = false;
-
-    final correctAnswer = widget.flashcards[_currentIndex].term;
-    _options = [correctAnswer];
-
-    final otherFlashcards =
-        widget.flashcards.where((f) => f.term != correctAnswer).toList();
-    otherFlashcards.shuffle();
-    _options.addAll(otherFlashcards.take(3).map((f) => f.term));
-    _options.shuffle();
-
-    _progress = (_currentIndex / widget.flashcards.length);
+  // Dialog hiển thị kết quả học tập
+  void _showResultsDialog() {
+    final stats = _controller.getStudyStatistics();
+    QlzModal.showDialog(
+      context: context,
+      title: 'Study Session Results',
+      isDismissible: false,
+      backgroundColor: AppColors.darkCard,
+      child: _ResultsDialogContent(stats: stats),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+            setState(() {});
+          },
+          child: const Text('Continue Learning', style: TextStyle(color: Colors.white)),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+            Navigator.pop(context);
+          },
+          child: const Text('Finish Session', style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    );
   }
 
-  void _checkAnswer(String answer) {
-    if (_isAnswerSubmitted) return;
+  // Dialog khi hoàn thành module
+  void _showModuleCompletionDialog() {
+    QlzModal.showDialog(
+      context: context,
+      title: 'Module Completed! 🎉',
+      isDismissible: false,
+      backgroundColor: AppColors.darkCard,
+      child: _ModuleCompletionContent(totalCards: widget.flashcards.length),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+            _controller.resetForNewSession();
+            setState(() {});
+          },
+          child: const Text('Review Again', style: TextStyle(color: Colors.white)),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+            Navigator.pop(context);
+          },
+          child: const Text('Finish', style: TextStyle(color: Colors.green)),
+        ),
+      ],
+    );
+  }
 
-    final isCorrect = answer == widget.flashcards[_currentIndex].term;
-
+  // Xử lý câu trả lời trắc nghiệm
+  void _handleMultipleChoiceAnswer(String answer) {
+    if (_controller.isAnswerSubmitted) return;
     setState(() {
-      _selectedAnswer = answer;
-      _isAnswerSubmitted = true;
-      _isAnswerCorrect = isCorrect;
-
-      if (isCorrect) {
-        _correctAnswers++;
-        // Tự động chuyển sang từ vựng tiếp theo sau 1 giây nếu trả lời đúng
-        _autoNextTimer = Timer(const Duration(seconds: 1), () {
-          if (mounted) {
-            _nextQuestion();
-          }
-        });
+      _controller.checkMultipleChoiceAnswer(answer);
+      if (_controller.isAnswerCorrect) {
+        _controller.autoAdvanceAfterDelay(() => setState(() {}));
       }
-      _totalAnswered++;
     });
   }
 
-  void _nextQuestion() {
-    // Hủy Timer nếu còn tồn tại
-    _autoNextTimer?.cancel();
-
-    if (_currentIndex < widget.flashcards.length - 1) {
-      setState(() {
-        _currentIndex++;
-        _setupQuestion();
-      });
-    } else {
-      _showResultsDialog();
-    }
-  }
-
-  void _showResultsDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.darkCard,
-        title: const Text(
-          'Kết quả học tập',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          textAlign: TextAlign.center,
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Bạn trả lời đúng $_correctAnswers/${widget.flashcards.length} câu',
-              style: const TextStyle(color: Colors.white),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Tỷ lệ chính xác: ${(_correctAnswers / widget.flashcards.length * 100).toStringAsFixed(0)}%',
-              style: TextStyle(
-                color: _correctAnswers > widget.flashcards.length / 2
-                    ? Colors.green
-                    : Colors.orange,
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              // Đầu tiên đóng dialog
-              Navigator.of(context).pop();
-
-              // Sau đó điều hướng đến màn hình Vocabulary
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const VocabularyScreen(
-                    moduleName: '',
-                  ), // Thay bằng màn hình Vocabulary thực tế
-                ),
-              );
-            },
-            child:
-                const Text('Kết thúc', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOptionItem(
-      String option, bool isSelected, bool isCorrectAnswer) {
-    Color backgroundColor = const Color(0xFF12113A);
-    Color borderColor = Colors.transparent;
-    Color textColor = Colors.white;
-
-    Widget? leadingIcon;
-
-    if (_isAnswerSubmitted) {
-      if (isCorrectAnswer) {
-        // Đáp án đúng luôn có viền xanh và icon check
-        borderColor = const Color(0xFF63E48D);
-        leadingIcon = const Icon(
-          Icons.check_circle,
-          color: Color(0xFF63E48D),
-          size: 24,
-        );
-      } else if (isSelected) {
-        // Đáp án đã chọn nhưng sai
-        borderColor = const Color(0xFFFF4D4F);
-        leadingIcon = const Icon(
-          Icons.close,
-          color: Color(0xFFFF4D4F),
-          size: 24,
-        );
+  // Xử lý câu trả lời gõ
+  void _handleTypingAnswer() {
+    if (_controller.isAnswerSubmitted) return;
+    setState(() {
+      _controller.checkTypingAnswer();
+      if (_controller.isAnswerCorrect) {
+        _controller.autoAdvanceAfterDelay(() => setState(() {}));
       }
-    } else if (isSelected) {
-      // Đáp án đang được chọn
-      borderColor = AppColors.primary;
-    }
+    });
+  }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: borderColor,
-          width: borderColor != Colors.transparent ? 2 : 1,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: _isAnswerSubmitted ? null : () => _checkAnswer(option),
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-            child: Row(
-              children: [
-                if (leadingIcon != null) ...[
-                  SizedBox(width: 24, child: leadingIcon),
-                  const SizedBox(width: 8),
-                ],
-                Expanded(
-                  child: Text(
-                    option,
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 16,
-                      fontWeight:
-                          isSelected || isCorrectAnswer && _isAnswerSubmitted
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  // Chuyển bước tiếp theo
+  void _handleNextStep() {
+    _controller.nextStep(() {
+      setState(() {});
+      if (_controller.isModuleCompleted()) {
+        _showModuleCompletionDialog();
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     if (widget.flashcards.isEmpty) {
       return QlzScreen(
-        appBar: AppBar(title: const Text('Học tập')),
+        appBar: AppBar(title: const Text('Study')),
         child: QlzEmptyState.noData(
-          title: 'Không có thẻ ghi nhớ',
-          message: 'Học phần này chưa có thẻ ghi nhớ nào để học.',
-          actionLabel: 'Quay lại',
+          title: 'No Flashcards',
+          message: 'This module has no flashcards to study yet.',
+          actionLabel: 'Go Back',
           onAction: () => Navigator.pop(context),
         ),
       );
     }
 
+    final stats = _controller.getStudyStatistics();
+    final completed = stats['completedCards'] as int;
+    final total = widget.flashcards.length;
+    final percentComplete = total > 0 ? (completed / total * 100).toInt() : 0;
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A092D),
-      appBar: AppBar(
+      appBar: QlzAppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leadingWidth: 48,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
-            onPressed: () {
-              // TODO: Implement settings
-            },
-          ),
-        ],
+        title: '${_controller.getCurrentPhase()} (${_controller.getCurrentPhaseCardIndex() + 1}/${_controller.getCurrentPhaseCardCount()})',
+        foregroundColor: Colors.white,
+        centerTitle: true,
       ),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Progress section
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  // Correct answers counter
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _correctAnswers > 0
-                          ? const Color(0xFF12113A)
-                          : const Color(0xFF12113A),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: _correctAnswers > 0
-                            ? const Color(0xFF63E48D)
-                            : Colors.transparent,
-                        width: 2,
-                      ),
-                    ),
-                    child: Text(
-                      '$_correctAnswers',
-                      style: TextStyle(
-                        color: _correctAnswers > 0
-                            ? const Color(0xFF63E48D)
-                            : Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-
-                  // Progress bar
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: _progress,
-                          backgroundColor: const Color(0xFF282A4A),
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            Color(0xFF63E48D),
-                          ),
-                          minHeight: 8,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Total flashcards counter
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF12113A),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '${widget.flashcards.length}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
+              padding: const EdgeInsets.all(16),
+              child: QlzProgress(
+                value: _controller.getProgress(),
+                height: 8,
+                color: AppColors.primary,
+                backgroundColor: const Color(0xFF282A4A),
               ),
             ),
+            Expanded(
+              child: _controller.currentMode == StudyMode.multipleChoice
+                  ? MultipleChoiceView(
+                      controller: _controller,
+                      onAnswer: _handleMultipleChoiceAnswer,
+                      onNext: _handleNextStep,
+                    )
+                  : TypingView(
+                      controller: _controller,
+                      onAnswer: _handleTypingAnswer,
+                      onNext: _handleNextStep,
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-            const SizedBox(height: 24),
+// Widget nội dung dialog kết quả
+class _ResultsDialogContent extends StatelessWidget {
+  final Map<String, dynamic> stats;
 
-            // Definition section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                widget.flashcards[_currentIndex].definition,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+  const _ResultsDialogContent({required this.stats});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Cards completed: ${stats['completedCards']}/${stats['totalCards']} (${stats['completionRate'].toStringAsFixed(0)}%)',
+          style: const TextStyle(color: Colors.white),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Total cards studied: ${stats['cardsStudied']}',
+          style: const TextStyle(color: Colors.white),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Accuracy rate: ${stats['accuracyRate'].toStringAsFixed(0)}%',
+          style: TextStyle(
+            color: stats['accuracyRate'] > 70 ? Colors.green : Colors.orange,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Multiple choice correct: ${stats['multipleChoiceCorrect']}',
+          style: const TextStyle(color: Colors.white),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Typing correct: ${stats['typingCorrect']}',
+          style: const TextStyle(color: Colors.white),
+          textAlign: TextAlign.center,
+        ),
+        if (stats['cardsNeedingReview'] > 0) ...[
+          const SizedBox(height: 12),
+          Text(
+            'Cards still needing review: ${stats['cardsNeedingReview']}',
+            style: const TextStyle(
+              color: Colors.orange,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// Widget nội dung dialog hoàn thành module
+class _ModuleCompletionContent extends StatelessWidget {
+  final int totalCards;
+
+  const _ModuleCompletionContent({required this.totalCards});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+          'Congratulations! You have successfully learned all the cards in this module.',
+          style: TextStyle(color: Colors.white),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Total cards mastered: $totalCards',
+          style: const TextStyle(
+            color: Colors.green,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+}
+
+// Widget giao diện trắc nghiệm
+class MultipleChoiceView extends StatelessWidget {
+  final StudyScreenController controller;
+  final Function(String) onAnswer;
+  final VoidCallback onNext;
+
+  const MultipleChoiceView({super.key, 
+    required this.controller,
+    required this.onAnswer,
+    required this.onNext,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final currentCard = controller.getCurrentCard();
+    if (currentCard == null) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            currentCard.flashcard.definition,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        if (controller.isAnswerSubmitted)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              controller.isAnswerCorrect
+                  ? "잘했어요! (Well done!)"
+                  : "조금만 더요, 아직 배우고 있잖아요! (Keep going, you're still learning!)",
+              style: TextStyle(
+                color: controller.isAnswerCorrect ? AppColors.success : AppColors.error,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!controller.isAnswerSubmitted)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'Choose the correct answer',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
-              ),
+              ...List.generate(controller.options.length, (index) {
+                final option = controller.options[index];
+                final isSelected = controller.selectedAnswer == option;
+                final isCorrectAnswer = currentCard.flashcard.term == option;
+                QlzQuizOptionState optionState = QlzQuizOptionState.idle;
+                if (controller.isAnswerSubmitted) {
+                  if (isCorrectAnswer) {
+                    optionState = QlzQuizOptionState.correct;
+                  } else if (isSelected) {
+                    optionState = QlzQuizOptionState.incorrect;
+                  }
+                } else if (isSelected) {
+                  optionState = QlzQuizOptionState.selected;
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: QlzQuizOption(
+                    text: option,
+                    state: optionState,
+                    onTap: () => onAnswer(option),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+        const Spacer(),
+        if (controller.isAnswerSubmitted && !controller.isAnswerCorrect)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: QlzButton.primary(
+              label: 'Continue',
+              isFullWidth: true,
+              onPressed: onNext,
             ),
+          ),
+      ],
+    );
+  }
+}
 
-            const SizedBox(height: 24),
+// Widget giao diện gõ
+class TypingView extends StatelessWidget {
+  final StudyScreenController controller;
+  final VoidCallback onAnswer;
+  final VoidCallback onNext;
 
-            // Feedback section - show only after answering
-            if (_isAnswerSubmitted)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  _isAnswerCorrect ? "잘했어요!" : "조금만 더요, 아직 배우고 있잖아요!",
+  const TypingView({super.key, 
+    required this.controller,
+    required this.onAnswer,
+    required this.onNext,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final currentCard = controller.getCurrentCard();
+    if (currentCard == null) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            currentCard.flashcard.definition,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        if (controller.isAnswerSubmitted)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  controller.isAnswerCorrect
+                      ? "잘했어요! (Well done!)"
+                      : "아쉬워요. 정답은: (Too bad. The correct answer is:)",
                   style: TextStyle(
-                    color: _isAnswerCorrect
-                        ? const Color(0xFF63E48D)
-                        : const Color(0xFFFF4D4F),
+                    color: controller.isAnswerCorrect ? const Color(0xFF63E48D) : const Color(0xFFFF4D4F),
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-
-            const SizedBox(height: 16),
-
-            // Options section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Only show this label when not answered yet
-                  if (!_isAnswerSubmitted)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 12),
-                      child: Text(
-                        'Chọn câu trả lời',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                if (!controller.isAnswerCorrect) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    currentCard.flashcard.term,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
-
-                  // Options list
-                  ...List.generate(_options.length, (index) {
-                    final option = _options[index];
-                    final isSelected = _selectedAnswer == option;
-                    final isCorrectAnswer =
-                        option == widget.flashcards[_currentIndex].term;
-
-                    return _buildOptionItem(
-                        option, isSelected, isCorrectAnswer);
-                  }),
+                  ),
                 ],
-              ),
+              ],
             ),
-
-            const Spacer(),
-
-            // Continue button - only show for incorrect answers
-            if (_isAnswerSubmitted && !_isAnswerCorrect)
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _nextQuestion,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text(
-                      '계속하기',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+          ),
+        const SizedBox(height: 24),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!controller.isAnswerSubmitted)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'Type the exact term',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
+              QlzTextField(
+                controller: controller.answerController,
+                isDisabled: controller.isAnswerSubmitted,
+                hintText: 'Enter your answer...',
+                onSubmitted: (_) => onAnswer(),
+                suffixIcon: Icons.send,
+                onSuffixIconTap: controller.isAnswerSubmitted ? null : onAnswer,
               ),
-          ],
+            ],
+          ),
         ),
-      ),
+        const Spacer(),
+        if (controller.isAnswerSubmitted && !controller.isAnswerCorrect)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: QlzButton.primary(
+              label: 'Continue',
+              isFullWidth: true,
+              onPressed: onNext,
+            ),
+          ),
+      ],
     );
   }
 }
