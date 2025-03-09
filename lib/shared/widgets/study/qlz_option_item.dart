@@ -1,9 +1,6 @@
-// lib/shared/widgets/study/qlz_option_item.dart
-
 import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 
-/// A widget for displaying study options with consistent styling.
 final class QlzOptionItem extends StatelessWidget {
   /// The icon to display.
   final IconData icon;
@@ -26,6 +23,9 @@ final class QlzOptionItem extends StatelessWidget {
   /// Whether this option is currently disabled.
   final bool isDisabled;
 
+  /// The height of the option item (default reduced by 15%).
+  final double? height;
+
   const QlzOptionItem({
     super.key,
     required this.icon,
@@ -35,6 +35,7 @@ final class QlzOptionItem extends StatelessWidget {
     this.color,
     this.isSelected = false,
     this.isDisabled = false,
+    this.height,
   });
 
   @override
@@ -52,7 +53,10 @@ final class QlzOptionItem extends StatelessWidget {
         onTap: isDisabled ? null : onTap,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding:
+              const EdgeInsets.all(12), // Giảm padding để tối ưu không gian
+          height:
+              height ?? 68, // Giảm 15% so với kích thước ban đầu (~80 -> 68)
           decoration: BoxDecoration(
             color: backgroundColor,
             borderRadius: BorderRadius.circular(12),
@@ -68,8 +72,8 @@ final class QlzOptionItem extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 42, // Giảm kích thước icon container một chút
+                height: 42,
                 decoration: BoxDecoration(
                   color: effectiveColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
@@ -77,13 +81,14 @@ final class QlzOptionItem extends StatelessWidget {
                 child: Icon(
                   icon,
                   color: effectiveColor,
-                  size: 24,
+                  size: 22, // Giảm icon một chút
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       label,
@@ -92,7 +97,8 @@ final class QlzOptionItem extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(
+                        height: 2), // Giảm khoảng cách giữa label và subtitle
                     Text(
                       subtitle,
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -100,6 +106,8 @@ final class QlzOptionItem extends StatelessWidget {
                             ? Colors.white.withOpacity(0.7)
                             : Colors.black.withOpacity(0.7),
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis, // Tránh xuống dòng dài
                     ),
                   ],
                 ),
@@ -109,7 +117,7 @@ final class QlzOptionItem extends StatelessWidget {
                 color: isDarkMode
                     ? Colors.white.withOpacity(0.7)
                     : Colors.black.withOpacity(0.7),
-                size: 16,
+                size: 14, // Giảm kích thước icon điều hướng
               ),
             ],
           ),
