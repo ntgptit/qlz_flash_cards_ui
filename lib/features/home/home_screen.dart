@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/features/home/tabs/home_tab.dart';
 import 'package:qlz_flash_cards_ui/features/home/tabs/solutions_tab.dart';
-import 'package:qlz_flash_cards_ui/features/library/library_screen.dart';
+import 'package:qlz_flash_cards_ui/features/library/presentation/screens/library_screen.dart';
 import 'package:qlz_flash_cards_ui/features/profile/profile_screen.dart';
 
 final class HomeScreen extends StatefulWidget {

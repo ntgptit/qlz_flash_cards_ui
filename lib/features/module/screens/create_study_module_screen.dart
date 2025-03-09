@@ -1,71 +1,44 @@
-// lib/features/module/screens/create_study_module_screen.dart
-
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
+import 'package:qlz_flash_cards_ui/features/module/data/repositories/module_repository.dart';
+import 'package:qlz_flash_cards_ui/features/module/logic/cubit/create_module_cubit.dart';
+import 'package:qlz_flash_cards_ui/features/module/logic/states/create_module_state.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/buttons/qlz_button.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/cards/qlz_card.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_loading_state.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_snackbar.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/inputs/qlz_text_field.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/labels/qlz_label.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/layout/qlz_screen.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
-import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_loading_state.dart';
-import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_snackbar.dart';
 
-final class CreateStudyModuleScreen extends StatefulWidget {
+class CreateStudyModuleScreen extends StatefulWidget {
   const CreateStudyModuleScreen({super.key});
-
   @override
-  State<CreateStudyModuleScreen> createState() =>
-      _CreateStudyModuleScreenState();
+  State<CreateStudyModuleScreen> createState() => _CreateStudyModuleScreenState();
 }
 
 class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final List<TextEditingController> _termControllers = [];
-  final List<TextEditingController> _definitionControllers = [];
-  final List<int> _vocabularyCards = [0, 1];
   final _scrollController = ScrollController();
-
-  String? _titleError;
-  Map<int, String?> _termErrors = {};
-  Map<int, String?> _definitionErrors = {};
-  bool _isSubmitting = false;
-
+  late CreateModuleCubit _cubit;
+  
   @override
   void initState() {
     super.initState();
-    // Initialize controllers for existing cards
-    for (int i = 0; i < _vocabularyCards.length; i++) {
-      _termControllers.add(TextEditingController());
-      _definitionControllers.add(TextEditingController());
-    }
+    _cubit = CreateModuleCubit(context.read<ModuleRepository>());
   }
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    for (var controller in _termControllers) {
-      controller.dispose();
-    }
-    for (var controller in _definitionControllers) {
-      controller.dispose();
-    }
     _scrollController.dispose();
+    _cubit.close();
     super.dispose();
   }
 
   void _addNewCard() {
-    final newIndex = _vocabularyCards.length;
-    setState(() {
-      _vocabularyCards.add(newIndex);
-      _termControllers.add(TextEditingController());
-      _definitionControllers.add(TextEditingController());
-    });
-
-    // Scroll to new card after it's added
+    _cubit.addFlashcard();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -77,165 +50,95 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
     });
   }
 
-  bool _validateForm() {
-    bool isValid = true;
-    final title = _titleController.text.trim();
-    Map<int, String?> newTermErrors = {};
-    Map<int, String?> newDefinitionErrors = {};
-
-    // Validate title
-    if (title.isEmpty) {
-      setState(() {
-        _titleError = 'Vui lòng nhập tiêu đề';
-      });
-      isValid = false;
-    } else {
-      setState(() {
-        _titleError = null;
-      });
-    }
-
-    // Validate at least the first two cards
-    for (int i = 0; i < 2; i++) {
-      if (_termControllers[i].text.trim().isEmpty) {
-        newTermErrors[i] = 'Vui lòng nhập thuật ngữ';
-        isValid = false;
-      }
-
-      if (_definitionControllers[i].text.trim().isEmpty) {
-        newDefinitionErrors[i] = 'Vui lòng nhập định nghĩa';
-        isValid = false;
-      }
-    }
-
-    // Check remaining cards if they have content
-    for (int i = 2; i < _vocabularyCards.length; i++) {
-      final term = _termControllers[i].text.trim();
-      final definition = _definitionControllers[i].text.trim();
-
-      // If one has content, the other should too
-      if (term.isNotEmpty && definition.isEmpty) {
-        newDefinitionErrors[i] = 'Vui lòng nhập định nghĩa';
-        isValid = false;
-      } else if (term.isEmpty && definition.isNotEmpty) {
-        newTermErrors[i] = 'Vui lòng nhập thuật ngữ';
-        isValid = false;
-      }
-    }
-
-    setState(() {
-      _termErrors = newTermErrors;
-      _definitionErrors = newDefinitionErrors;
-    });
-
-    return isValid;
-  }
-
   Future<void> _handleSave() async {
-    if (!_validateForm()) {
-      QlzSnackbar.error(
-        context: context,
-        message: 'Vui lòng kiểm tra lại các trường bắt buộc',
-      );
-      return;
-    }
-
-    setState(() {
-      _isSubmitting = true;
-    });
-
-    try {
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 1));
-
-      if (!mounted) return;
-
-      // Show success message and pop
+    final result = await _cubit.submitModule();
+    if (!mounted) return;
+    if (result) {
       QlzSnackbar.success(
         context: context,
         message: 'Học phần đã được tạo thành công',
       );
-
-      // Return to previous screen
       Navigator.pop(context);
-    } catch (e) {
-      if (mounted) {
-        QlzSnackbar.error(
-          context: context,
-          message: 'Có lỗi xảy ra. Vui lòng thử lại sau.',
-        );
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
+    } else {
+      QlzSnackbar.error(
+        context: context,
+        message: 'Vui lòng kiểm tra lại các trường bắt buộc',
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return QlzScreen(
-      appBar: QlzAppBar(
-        title: 'Tạo học phần',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () => Navigator.pushNamed(
-              context,
-              AppRoutes.moduleSettings,
-            ),
-          ),
-          _isSubmitting
-              ? const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
+    return BlocProvider.value(
+      value: _cubit,
+      child: BlocBuilder<CreateModuleCubit, CreateModuleState>(
+        builder: (context, state) {
+          final isSubmitting = state.status == CreateModuleStatus.submitting;
+          return QlzScreen(
+            appBar: QlzAppBar(
+              title: 'Tạo học phần',
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.settings),
+                  onPressed: () => Navigator.pushNamed(
+                    context,
+                    AppRoutes.moduleSettings,
                   ),
-                )
-              : IconButton(
-                  icon: const Icon(Icons.check),
-                  onPressed: _handleSave,
                 ),
-        ],
-      ),
-      // floatingActionButton: null,
-      child: _isSubmitting
-          ? const Center(
-              child: QlzLoadingState(
-                message: 'Đang tạo học phần...',
-                type: QlzLoadingType.circular,
-              ),
-            )
-          : SingleChildScrollView(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const QlzLabel.muted('Chủ đề, chương, đơn vị'),
-                  const SizedBox(height: 16),
-                  _buildModuleInfoCard(),
-                  _buildVocabularyCardsList(),
-                  const SizedBox(height: 20),
-                  Center(
-                    child: QlzButton.secondary(
-                      label: 'Thêm thẻ',
-                      icon: Icons.add,
-                      onPressed: _addNewCard,
+                isSubmitting
+                    ? const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      )
+                    : IconButton(
+                        icon: const Icon(Icons.check),
+                        onPressed: _handleSave,
+                      ),
+              ],
+            ),
+            child: isSubmitting
+                ? const Center(
+                    child: QlzLoadingState(
+                      message: 'Đang tạo học phần...',
+                      type: QlzLoadingType.circular,
+                    ),
+                  )
+                : SingleChildScrollView(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const QlzLabel.muted('Chủ đề, chương, đơn vị'),
+                        const SizedBox(height: 16),
+                        _buildModuleInfoCard(state),
+                        _buildVocabularyCardsList(state),
+                        const SizedBox(height: 20),
+                        Center(
+                          child: QlzButton.secondary(
+                            label: 'Thêm thẻ',
+                            icon: Icons.add,
+                            onPressed: _addNewCard,
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 40),
-                ],
-              ),
-            ),
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildModuleInfoCard() {
+  Widget _buildModuleInfoCard(CreateModuleState state) {
     return QlzCard(
       padding: const EdgeInsets.all(20),
       margin: const EdgeInsets.only(bottom: 20),
@@ -249,9 +152,7 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
               QlzButton.secondary(
                 label: 'Quét tài liệu',
                 icon: Icons.document_scanner_outlined,
-                onPressed: () {
-                  // TODO: Implement scan functionality
-                },
+                onPressed: () {},
                 size: QlzButtonSize.small,
               ),
               const SizedBox(width: 8),
@@ -265,36 +166,35 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
           ),
           const SizedBox(height: 16),
           QlzTextField(
-            controller: _titleController,
             hintText: 'Học phần của bạn có chủ đề gì?',
-            error: _titleError,
-            onChanged: (_) => setState(() => _titleError = null),
+            error: state.titleError,
+            onChanged: (value) => _cubit.updateTitle(value),
           ),
           const SizedBox(height: 20),
           const QlzLabel('MÔ TẢ'),
           const SizedBox(height: 12),
           QlzTextField(
-            controller: _descriptionController,
             hintText: 'Thêm mô tả...',
             isMultiline: true,
+            onChanged: (value) => _cubit.updateDescription(value),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildVocabularyCardsList() {
+  Widget _buildVocabularyCardsList(CreateModuleState state) {
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _vocabularyCards.length,
-      itemBuilder: (context, index) => _buildVocabularyCard(index),
+      itemCount: state.flashcards.length,
+      itemBuilder: (context, index) => _buildVocabularyCard(context, index, state),
     );
   }
 
-  Widget _buildVocabularyCard(int index) {
+  Widget _buildVocabularyCard(BuildContext context, int index, CreateModuleState state) {
     final isRequired = index < 2;
-
+    final flashcard = state.flashcards[index];
     return QlzCard(
       padding: const EdgeInsets.all(20),
       margin: const EdgeInsets.only(bottom: 16),
@@ -314,25 +214,7 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
                     color: AppColors.error,
                     size: 20,
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _vocabularyCards.removeAt(index);
-                      final controller = _termControllers.removeAt(index);
-                      controller.dispose();
-                      final defController =
-                          _definitionControllers.removeAt(index);
-                      defController.dispose();
-
-                      // Update errors
-                      final newTermErrors = Map<int, String?>.from(_termErrors);
-                      final newDefErrors =
-                          Map<int, String?>.from(_definitionErrors);
-                      newTermErrors.remove(index);
-                      newDefErrors.remove(index);
-                      _termErrors = newTermErrors;
-                      _definitionErrors = newDefErrors;
-                    });
-                  },
+                  onPressed: () => _cubit.removeFlashcard(index),
                   constraints: const BoxConstraints(
                     minWidth: 32,
                     minHeight: 32,
@@ -344,18 +226,10 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
           ),
           const SizedBox(height: 12),
           QlzTextField(
-            controller: _termControllers[index],
             hintText: 'Nhập thuật ngữ...',
-            error: _termErrors[index],
-            onChanged: (_) {
-              if (_termErrors.containsKey(index)) {
-                setState(() {
-                  final newErrors = Map<int, String?>.from(_termErrors);
-                  newErrors.remove(index);
-                  _termErrors = newErrors;
-                });
-              }
-            },
+            error: state.termErrors[index],
+            onChanged: (value) => _cubit.updateFlashcardTerm(index, value),
+            controller: TextEditingController(text: flashcard.term),
           ),
           const SizedBox(height: 20),
           Row(
@@ -366,19 +240,11 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
           ),
           const SizedBox(height: 12),
           QlzTextField(
-            controller: _definitionControllers[index],
             hintText: 'Nhập định nghĩa...',
             isMultiline: true,
-            error: _definitionErrors[index],
-            onChanged: (_) {
-              if (_definitionErrors.containsKey(index)) {
-                setState(() {
-                  final newErrors = Map<int, String?>.from(_definitionErrors);
-                  newErrors.remove(index);
-                  _definitionErrors = newErrors;
-                });
-              }
-            },
+            error: state.definitionErrors[index],
+            onChanged: (value) => _cubit.updateFlashcardDefinition(index, value),
+            controller: TextEditingController(text: flashcard.definition),
           ),
           const SizedBox(height: 12),
           Row(

@@ -7,6 +7,7 @@ import 'package:qlz_flash_cards_ui/features/vocabulary/data/flashcard.dart';
 // Sample flashcards data (typically would come from a repository)
 final List<Flashcard> sampleFlashcards = [
   const Flashcard(
+    id: '',
     term: '과일',
     definition: 'Trái cây',
     example: '저는 과일을 많이 먹어요.',
@@ -14,6 +15,7 @@ final List<Flashcard> sampleFlashcards = [
     isDifficult: false,
   ),
   const Flashcard(
+    id: '',
     term: '야채',
     definition: 'Rau củ',
     example: '야채를 먹으면 건강에 좋습니다.',
@@ -21,6 +23,7 @@ final List<Flashcard> sampleFlashcards = [
     isDifficult: false,
   ),
   const Flashcard(
+    id: '',
     term: '고기',
     definition: 'Thịt',
     example: '저는 고기를 좋아해요.',
@@ -28,6 +31,7 @@ final List<Flashcard> sampleFlashcards = [
     isDifficult: true,
   ),
   const Flashcard(
+    id: '',
     term: '음료',
     definition: 'Đồ uống',
     example: '음료를 마시고 싶어요.',
@@ -35,6 +39,7 @@ final List<Flashcard> sampleFlashcards = [
     isDifficult: false,
   ),
   const Flashcard(
+    id: '',
     term: '빵',
     definition: 'Bánh mì',
     example: '아침에 빵을 먹었어요.',
@@ -42,6 +47,7 @@ final List<Flashcard> sampleFlashcards = [
     isDifficult: false,
   ),
   const Flashcard(
+    id: '',
     term: '생선',
     definition: 'Cá',
     example: '생선을 구워서 먹어요.',
@@ -49,6 +55,7 @@ final List<Flashcard> sampleFlashcards = [
     isDifficult: true,
   ),
   const Flashcard(
+    id: '',
     term: '밥',
     definition: 'Cơm',
     example: '저녁에 밥을 먹었어요.',
@@ -56,13 +63,15 @@ final List<Flashcard> sampleFlashcards = [
     isDifficult: false,
   ),
   const Flashcard(
+    id: '',
     term: '국',
     definition: 'Canh',
     example: '뜨거운 국을 조심하세요.',
     pronunciation: 'guk',
-    isDifficult: false,
+    isDifficult: false, 
   ),
   const Flashcard(
+    id: '',
     term: '치즈',
     definition: 'Phô mai',
     example: '치즈가 많이 들어간 피자를 좋아해요.',
@@ -70,6 +79,7 @@ final List<Flashcard> sampleFlashcards = [
     isDifficult: false,
   ),
   const Flashcard(
+    id: '',
     term: '달걀',
     definition: 'Trứng',
     example: '달걀을 삶아서 먹었어요.',
@@ -77,6 +87,7 @@ final List<Flashcard> sampleFlashcards = [
     isDifficult: false,
   ),
   const Flashcard(
+    id: '',
     term: '우유',
     definition: 'Sữa',
     example: '우유를 매일 마셔요.',
@@ -84,6 +95,7 @@ final List<Flashcard> sampleFlashcards = [
     isDifficult: false,
   ),
   const Flashcard(
+    id: '',
     term: '커피',
     definition: 'Cà phê',
     example: '아침마다 커피를 마셔요.',
@@ -91,6 +103,7 @@ final List<Flashcard> sampleFlashcards = [
     isDifficult: false,
   ),
   const Flashcard(
+    id: '',
     term: '과자',
     definition: 'Bánh kẹo',
     example: '과자를 너무 많이 먹지 마세요.',
@@ -98,6 +111,7 @@ final List<Flashcard> sampleFlashcards = [
     isDifficult: false,
   ),
   const Flashcard(
+    id: '',
     term: '설탕',
     definition: 'Đường',
     example: '설탕을 넣으면 맛이 달아요.',
@@ -105,6 +119,7 @@ final List<Flashcard> sampleFlashcards = [
     isDifficult: true,
   ),
   const Flashcard(
+    id: '',
     term: '소금',
     definition: 'Muối',
     example: '소금을 조금 넣으세요.',
@@ -112,6 +127,7 @@ final List<Flashcard> sampleFlashcards = [
     isDifficult: false,
   ),
   const Flashcard(
+    id: '',
     term: '후추',
     definition: 'Tiêu',
     example: '후추를 뿌려서 먹어요.',
@@ -119,6 +135,7 @@ final List<Flashcard> sampleFlashcards = [
     isDifficult: true,
   ),
   const Flashcard(
+    id: '',
     term: '면',
     definition: 'Mì',
     example: '면을 삶아서 국수로 만들어요.',
@@ -126,6 +143,7 @@ final List<Flashcard> sampleFlashcards = [
     isDifficult: false,
   ),
   const Flashcard(
+    id: '',
     term: '김치',
     definition: 'Kimchi',
     example: '한국 사람들은 김치를 많이 먹어요.',
@@ -133,6 +151,7 @@ final List<Flashcard> sampleFlashcards = [
     isDifficult: false,
   ),
   const Flashcard(
+    id: '',
     term: '햄버거',
     definition: 'Hamburger',
     example: '햄버거를 먹으러 가자!',
@@ -200,7 +219,7 @@ final class VocabularyCubit extends Cubit<VocabularyState> {
         pronunciation: flashcard.pronunciation,
         imageUrl: flashcard.imageUrl,
         audioUrl: flashcard.audioUrl,
-        isDifficult: !flashcard.isDifficult,
+        isDifficult: !flashcard.isDifficult, id: '',
       );
 
       emit(state.copyWith(flashcards: currentFlashcards));
@@ -253,7 +272,7 @@ final class VocabularyCubit extends Cubit<VocabularyState> {
           pronunciation: flashcard.pronunciation,
           imageUrl: flashcard.imageUrl,
           audioUrl: flashcard.audioUrl,
-          isDifficult: true,
+          isDifficult: true, id: '',
         );
 
         emit(state.copyWith(flashcards: currentFlashcards));
