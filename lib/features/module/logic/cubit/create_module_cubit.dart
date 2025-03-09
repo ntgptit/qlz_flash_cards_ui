@@ -1,6 +1,6 @@
 // lib/features/module/logic/cubit/create_module_cubit.dart
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:qlz_flash_cards_ui/features/vocabulary/data/flashcard.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 
 import '../../data/models/module_settings_model.dart';
 import '../../data/models/study_module_model.dart';

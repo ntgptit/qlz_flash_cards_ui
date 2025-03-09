@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:qlz_flash_cards_ui/features/vocabulary/data/flashcard.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 import '../enums/study_enums.dart';
 import '../providers/study_modes_provider.dart';
 
@@ -189,7 +189,7 @@ class _StudySettingsScreenState extends State<StudySettingsScreen> {
                     fontWeight: FontWeight.bold),
               ),
             ),
-            Container(
+            SizedBox(
               width: 60,
               height: 60,
               child: _buildLoadingSpinner(),

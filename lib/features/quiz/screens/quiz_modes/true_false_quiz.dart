@@ -1,13 +1,14 @@
 // lib/features/quiz/screens/quiz_modes/true_false_quiz.dart
 
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/models/quiz_question.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/screens/quiz_modes/quiz_base_screen.dart';
-import 'package:qlz_flash_cards_ui/features/vocabulary/data/flashcard.dart';
-import 'package:qlz_flash_cards_ui/shared/widgets/cards/qlz_card.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/buttons/qlz_button.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/cards/qlz_card.dart';
 
 /// Màn hình quiz đúng/sai
 class TrueFalseQuizScreen extends QuizBaseScreen<TrueFalseQuestion> {

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/factory/quiz_factory.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/models/quiz_question.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/models/quiz_result.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/models/quiz_settings.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/screens/quiz_result_screen.dart';
-import 'package:qlz_flash_cards_ui/features/vocabulary/data/flashcard.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/layout/qlz_modal.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/layout/qlz_screen.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';

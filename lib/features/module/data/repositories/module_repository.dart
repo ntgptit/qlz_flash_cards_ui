@@ -4,7 +4,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:qlz_flash_cards_ui/features/vocabulary/data/flashcard.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/module_settings_model.dart';

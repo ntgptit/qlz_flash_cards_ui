@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:qlz_flash_cards_ui/features/vocabulary/data/flashcard.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 
 class StudySummaryScreen extends StatelessWidget {
   final List<Flashcard> recentlyStudiedFlashcards;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/flashcard_module.dart';
 import 'package:qlz_flash_cards_ui/features/library/presentation/screens/library_screen.dart';
 import 'package:qlz_flash_cards_ui/features/module/module_module.dart';
 
@@ -7,7 +8,6 @@ import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/class/create_class_screen.dart';
-import '../../features/flashcard/screens/flashcard_study_mode_screen.dart';
 import '../../features/folder/screens/create_folder_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/profile/profile_screen.dart';
@@ -32,7 +32,8 @@ class RouteBuilder {
           folderName: params.getString('folderName', 'Unknown'),
           folderId: params.getString('folderId'),
         ),
-    AppRoutes.listStudyModuleOfFolder: (params) => ModuleModule.provideListScreen(
+    AppRoutes.listStudyModuleOfFolder: (params) =>
+        ModuleModule.provideListScreen(
           folderName: params.getString('folderName', 'Unknown'),
           folderId: params.getString('folderId'),
         ),
@@ -40,7 +41,8 @@ class RouteBuilder {
           moduleId: params.getString('moduleId', ''),
           moduleName: params.getString('moduleName', 'Module'),
         ),
-    AppRoutes.studyFlashcards: (params) => FlashcardStudyModeScreen(
+    AppRoutes.studyFlashcards: (params) =>
+        FlashcardModule.provideStudyModeScreen(
           flashcards: params.getFlashcards('flashcards'),
           initialIndex: params.getInt('initialIndex', 0),
         ),

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:qlz_flash_cards_ui/features/vocabulary/data/flashcard.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
+
 import '../enums/study_enums.dart';
 import '../screens/unified_study_screen.dart';
-import '../strategies/study_strategy.dart';
 import '../strategies/multiple_choice_strategy.dart';
-import '../strategies/writing_strategy.dart';
+import '../strategies/study_strategy.dart';
 import '../strategies/typing_test_strategy.dart';
+import '../strategies/writing_strategy.dart';
 
 class StudyModesProvider {
   static List<StudyModeInfo> getAllModes() {

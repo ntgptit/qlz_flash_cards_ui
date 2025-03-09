@@ -1,4 +1,4 @@
-import 'package:qlz_flash_cards_ui/features/vocabulary/data/flashcard.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 
 class StudySessionState {
   int currentIndex = 0;

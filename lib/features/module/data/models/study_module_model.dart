@@ -1,6 +1,6 @@
 // lib/features/module/data/models/study_module_model.dart
 import 'package:equatable/equatable.dart';
-import 'package:qlz_flash_cards_ui/features/vocabulary/data/flashcard.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 
 class StudyModule extends Equatable {
   final String id;

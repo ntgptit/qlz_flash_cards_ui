@@ -1,14 +1,15 @@
 // lib/features/quiz/factory/quiz_factory.dart
 
 import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/models/quiz_question.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/models/quiz_settings.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/screens/quiz_modes/matching_quiz.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/screens/quiz_modes/multiple_choice_quiz.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/screens/quiz_modes/true_false_quiz.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/screens/quiz_modes/written_quiz_simplified.dart';
-import 'package:qlz_flash_cards_ui/features/vocabulary/data/flashcard.dart';
 
 /// Factory pattern cho Quiz
 abstract class QuizFactory {

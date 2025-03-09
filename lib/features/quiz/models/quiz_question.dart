@@ -1,6 +1,6 @@
 // lib/features/quiz/models/quiz_question.dart
 
-import 'package:qlz_flash_cards_ui/features/vocabulary/data/flashcard.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 
 /// Lớp cơ sở cho tất cả các loại câu hỏi
 abstract class QuizQuestion {

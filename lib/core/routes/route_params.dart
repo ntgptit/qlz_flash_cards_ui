@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../features/vocabulary/data/flashcard.dart';
+
+import '../../features/flashcard/data/models/flashcard_model.dart';
 
 /// Quản lý tham số route một cách type-safe.
 class RouteParams {

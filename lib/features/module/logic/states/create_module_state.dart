@@ -1,6 +1,6 @@
 // lib/features/module/logic/states/create_module_state.dart
 import 'package:equatable/equatable.dart';
-import 'package:qlz_flash_cards_ui/features/vocabulary/data/flashcard.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 
 import '../../data/models/module_settings_model.dart';
 
