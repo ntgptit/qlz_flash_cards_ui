@@ -9,9 +9,11 @@ import 'package:qlz_flash_cards_ui/shared/widgets/cards/qlz_card.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/utils/qlz_chip.dart';
 
 final class ListStudyModuleOfFolderScreen extends StatelessWidget {
+  final String folderId;
   final String folderName;
 
-  const ListStudyModuleOfFolderScreen({super.key, required this.folderName});
+  const ListStudyModuleOfFolderScreen(
+      {super.key, required this.folderName, required this.folderId});
 
   @override
   Widget build(BuildContext context) {

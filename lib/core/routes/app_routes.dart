@@ -1,30 +1,12 @@
-// lib/core/routes/app_routes.dart
-
 import 'package:flutter/material.dart';
-import 'package:qlz_flash_cards_ui/features/auth/screens/forgot_password_screen.dart';
-import 'package:qlz_flash_cards_ui/features/auth/screens/login_screen.dart';
-import 'package:qlz_flash_cards_ui/features/auth/screens/register_screen.dart';
-import 'package:qlz_flash_cards_ui/features/class/create_class_screen.dart';
-import 'package:qlz_flash_cards_ui/features/flashcard/screens/flashcard_study_mode_screen.dart';
-import 'package:qlz_flash_cards_ui/features/folder/screens/create_folder_screen.dart';
-import 'package:qlz_flash_cards_ui/features/home/home_screen.dart';
-import 'package:qlz_flash_cards_ui/features/library/library_screen.dart';
-import 'package:qlz_flash_cards_ui/features/module/screens/create_study_module_screen.dart';
-import 'package:qlz_flash_cards_ui/features/module/screens/list_study_module_of_folder_screen.dart';
-import 'package:qlz_flash_cards_ui/features/module/screens/module_detail_screen.dart';
-import 'package:qlz_flash_cards_ui/features/module/screens/module_settings_screen.dart';
-import 'package:qlz_flash_cards_ui/features/profile/profile_screen.dart';
-import 'package:qlz_flash_cards_ui/features/quiz/quiz_screen.dart';
-import 'package:qlz_flash_cards_ui/features/study/study_screen.dart';
-import 'package:qlz_flash_cards_ui/features/study/study_settings_screen.dart';
-import 'package:qlz_flash_cards_ui/features/vocabulary/data/flashcard.dart';
-import 'package:qlz_flash_cards_ui/features/welcome_screen.dart';
+import 'route_builder.dart';
+import 'route_params.dart';
 
-/// Routes for the application
-sealed class AppRoutes {
+/// Quản lý các route trong ứng dụng.
+class AppRoutes {
   const AppRoutes._();
 
-  // Route names as constants
+  // Route names
   static const String welcome = '/';
   static const String login = '/login';
   static const String register = '/register';
@@ -36,6 +18,7 @@ sealed class AppRoutes {
   static const String moduleDetail = '/module-detail';
   static const String studyFlashcards = '/study-flashcards';
   static const String quiz = '/quiz';
+  static const String quizSettings = '/quiz-settings';
   static const String profile = '/profile';
   static const String createStudyModule = '/create-study-module';
   static const String moduleSettings = '/module-settings';
@@ -46,107 +29,137 @@ sealed class AppRoutes {
   static const String match = '/match';
   static const String blast = '/blast';
 
-  /// Generate route based on settings
+  /// Tạo route dựa trên settings.
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
-    final arguments = settings.arguments as Map<String, dynamic>?;
+    return RouteBuilder.buildRoute(settings);
+  }
 
-    return MaterialPageRoute(
-      settings: settings,
-      builder: (context) => switch (settings.name) {
-        welcome => const WelcomeScreen(),
-        login => const LoginScreen(),
-        register => const RegisterScreen(),
-        forgotPassword => const ForgotPasswordScreen(),
-        home => const HomeScreen(),
-        library => const LibraryScreen(),
-        folderDetail =>
-          const ListStudyModuleOfFolderScreen(folderName: 'Unknown'),
-        moduleDetail => const ModuleDetailScreen(),
-        studyFlashcards => _buildFlashcardStudyModeScreen(arguments),
-        learn => _buildStudySettingsScreen(arguments),
-        quiz => const QuizScreen(),
-        profile => const ProfileScreen(),
-        createStudyModule => const CreateStudyModuleScreen(),
-        moduleSettings => const ModuleSettingsScreen(),
-        createFolder => const CreateFolderScreen(),
-        createClass => const CreateClassScreen(),
-        listStudyModuleOfFolder =>
-          const ListStudyModuleOfFolderScreen(folderName: 'Unknown'),
-        // Các route khác cho các tùy chọn học tập còn lại
-        test => _buildPlaceholderScreen("Test Route"),
-        match => _buildPlaceholderScreen("Match Route"),
-        blast => _buildPlaceholderScreen("Blast Route"),
-        _ => _buildErrorScreen(settings.name),
-      },
+  // Type-safe navigation methods
+  static Future<dynamic> navigateToQuizSettings(
+    BuildContext context, {
+    required String moduleId,
+    required String moduleName,
+    required List flashcards,
+  }) {
+    return Navigator.pushNamed(
+      context,
+      quizSettings,
+      arguments: RouteParams(
+        routeName: quizSettings,
+        params: {
+          'moduleId': moduleId,
+          'moduleName': moduleName,
+          'flashcards': flashcards,
+        },
+      ).toMap(),
     );
   }
 
-  /// Build FlashcardStudyModeScreen with arguments
-  static Widget _buildFlashcardStudyModeScreen(
-      Map<String, dynamic>? arguments) {
-    if (arguments == null) {
-      return _buildErrorScreen("studyFlashcards (missing arguments)");
-    }
-
-    final flashcards = arguments['flashcards'] as List<Flashcard>?;
-    final initialIndex = arguments['initialIndex'] as int? ?? 0;
-
-    if (flashcards == null) {
-      return _buildErrorScreen("studyFlashcards (missing flashcards)");
-    }
-
-    return FlashcardStudyModeScreen(
-      flashcards: flashcards,
-      initialIndex: initialIndex,
+  static Future<dynamic> navigateToStudyFlashcards(
+    BuildContext context, {
+    required List flashcards,
+    int initialIndex = 0,
+  }) {
+    return Navigator.pushNamed(
+      context,
+      studyFlashcards,
+      arguments: RouteParams(
+        routeName: studyFlashcards,
+        params: {
+          'flashcards': flashcards,
+          'initialIndex': initialIndex,
+        },
+      ).toMap(),
     );
   }
 
-  /// Build StudySettingsScreen with arguments
-  static Widget _buildStudySettingsScreen(Map<String, dynamic>? arguments) {
-    if (arguments == null) {
-      return _buildErrorScreen("learn (missing arguments)");
-    }
-
-    final flashcards = arguments['flashcards'] as List<Flashcard>?;
-    final moduleName = arguments['moduleName'] as String? ?? 'Học phần';
-    final moduleId = arguments['moduleId'] as String?;
-
-    if (flashcards == null) {
-      return _buildErrorScreen("learn (missing flashcards)");
-    }
-
-    return StudySettingsScreen(
-      flashcards: flashcards,
-      moduleName: moduleName,
-      moduleId: moduleId,
+  static Future<dynamic> navigateToLearn(
+    BuildContext context, {
+    required List flashcards,
+    required String moduleName,
+    String? moduleId,
+  }) {
+    return Navigator.pushNamed(
+      context,
+      learn,
+      arguments: RouteParams(
+        routeName: learn,
+        params: {
+          'flashcards': flashcards,
+          'moduleName': moduleName,
+          'moduleId': moduleId,
+        },
+      ).toMap(),
     );
   }
 
-  /// Build placeholder screen for routes that are not yet implemented
-  static Widget _buildPlaceholderScreen(String title) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: const Center(
-        child: Text(
-          'Tính năng này đang được phát triển',
-          style: TextStyle(fontSize: 18),
-        ),
-      ),
+  static Future<dynamic> navigateToModuleList(
+    BuildContext context, {
+    required String folderName,
+    String? folderId,
+  }) {
+    return Navigator.pushNamed(
+      context,
+      listStudyModuleOfFolder,
+      arguments: RouteParams(
+        routeName: listStudyModuleOfFolder,
+        params: {
+          'folderName': folderName,
+          'folderId': folderId,
+        },
+      ).toMap(),
     );
   }
 
-  /// Build error screen for undefined routes
-  static Widget _buildErrorScreen(String? routeName) {
-    return Scaffold(
-      body: Center(
-        child: Text(
-          'No route defined for $routeName',
-          style: const TextStyle(
-            fontSize: 16,
-            color: Colors.red,
-          ),
-        ),
-      ),
+  static Future<dynamic> navigateToQuiz(
+    BuildContext context, {
+    required int quizTypeIndex,
+    required int difficultyIndex,
+    required List flashcards,
+    required String moduleId,
+    required String moduleName,
+    int questionCount = 10,
+    bool shuffleQuestions = true,
+    bool showCorrectAnswers = true,
+    bool enableTimer = false,
+    int timePerQuestion = 30,
+  }) {
+    return Navigator.pushNamed(
+      context,
+      quiz,
+      arguments: RouteParams(
+        routeName: quiz,
+        params: {
+          'quizType': quizTypeIndex,
+          'difficulty': difficultyIndex,
+          'flashcards': flashcards,
+          'moduleId': moduleId,
+          'moduleName': moduleName,
+          'questionCount': questionCount,
+          'shuffleQuestions': shuffleQuestions,
+          'showCorrectAnswers': showCorrectAnswers,
+          'enableTimer': enableTimer,
+          'timePerQuestion': timePerQuestion,
+        },
+      ).toMap(),
+    );
+  }
+
+  static Future<dynamic> navigateToFolderDetail(
+    BuildContext context, {
+    required String folderName,
+    String? folderId,
+  }) {
+    return Navigator.pushNamed(
+      context,
+      folderDetail,
+      arguments: RouteParams(
+        routeName: folderDetail,
+        params: {
+          'folderName': folderName,
+          'folderId': folderId,
+        },
+      ).toMap(),
     );
   }
 }

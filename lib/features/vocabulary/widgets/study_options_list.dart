@@ -39,7 +39,7 @@ final class StudyOptionsList extends StatelessWidget {
     return [
       StudyOptions.flashcards.copyWith(route: AppRoutes.studyFlashcards),
       StudyOptions.learn.copyWith(route: AppRoutes.learn),
-      StudyOptions.test.copyWith(route: AppRoutes.test),
+      StudyOptions.test.copyWith(route: AppRoutes.quizSettings),
       StudyOptions.match.copyWith(route: AppRoutes.match),
       StudyOptions.blast.copyWith(route: AppRoutes.blast),
     ];
