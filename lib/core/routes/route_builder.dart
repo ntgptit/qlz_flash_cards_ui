@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
-import 'package:qlz_flash_cards_ui/features/library/library_module.dart';
+import 'package:qlz_flash_cards_ui/features/library/presentation/screens/library_screen.dart';
+import 'package:qlz_flash_cards_ui/features/module/module_module.dart';
 
 import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
@@ -9,10 +10,6 @@ import '../../features/class/create_class_screen.dart';
 import '../../features/flashcard/screens/flashcard_study_mode_screen.dart';
 import '../../features/folder/screens/create_folder_screen.dart';
 import '../../features/home/home_screen.dart';
-import '../../features/module/screens/create_study_module_screen.dart';
-import '../../features/module/screens/list_study_module_of_folder_screen.dart';
-import '../../features/module/screens/module_detail_screen.dart';
-import '../../features/module/screens/module_settings_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/quiz/models/quiz_settings.dart';
 import '../../features/quiz/screens/quiz_screen.dart';
@@ -30,19 +27,18 @@ class RouteBuilder {
     AppRoutes.register: (_) => const RegisterScreen(),
     AppRoutes.forgotPassword: (_) => const ForgotPasswordScreen(),
     AppRoutes.home: (_) => const HomeScreen(),
-    AppRoutes.library: (_) => LibraryModule.create(),
-    AppRoutes.folderDetail: (params) => ListStudyModuleOfFolderScreen(
+    AppRoutes.library: (_) => const LibraryScreen(),
+    AppRoutes.folderDetail: (params) => ModuleModule.provideListScreen(
           folderName: params.getString('folderName', 'Unknown'),
           folderId: params.getString('folderId'),
         ),
-    AppRoutes.listStudyModuleOfFolder: (params) =>
-        ListStudyModuleOfFolderScreen(
+    AppRoutes.listStudyModuleOfFolder: (params) => ModuleModule.provideListScreen(
           folderName: params.getString('folderName', 'Unknown'),
           folderId: params.getString('folderId'),
         ),
-    AppRoutes.moduleDetail: (params) => ModuleDetailScreen(
-          id: params.getString('id', ''),
-          name: params.getString('name', 'Unknown'),
+    AppRoutes.moduleDetail: (params) => ModuleModule.provideDetailScreen(
+          moduleId: params.getString('moduleId', ''),
+          moduleName: params.getString('moduleName', 'Module'),
         ),
     AppRoutes.studyFlashcards: (params) => FlashcardStudyModeScreen(
           flashcards: params.getFlashcards('flashcards'),
@@ -70,8 +66,10 @@ class RouteBuilder {
           },
         ),
     AppRoutes.profile: (_) => const ProfileScreen(),
-    AppRoutes.createStudyModule: (_) => const CreateStudyModuleScreen(),
-    AppRoutes.moduleSettings: (_) => const ModuleSettingsScreen(),
+    AppRoutes.createStudyModule: (_) => ModuleModule.provideCreateScreen(),
+    AppRoutes.moduleSettings: (params) => ModuleModule.provideSettingsScreen(
+          moduleId: params.getString('moduleId', 'new'),
+        ),
     AppRoutes.createFolder: (_) => const CreateFolderScreen(),
     AppRoutes.createClass: (_) => const CreateClassScreen(),
     AppRoutes.learn: (params) => StudySettingsScreen(
@@ -90,13 +88,6 @@ class RouteBuilder {
     final builder = _routeBuilders[settings.name] ?? _errorScreenBuilder;
 
     try {
-      if (settings.name == AppRoutes.library) {
-        return MaterialPageRoute(
-          settings: settings,
-          builder: (context) => LibraryModule.create(),
-        );
-      }
-
       return MaterialPageRoute(
         settings: settings,
         builder: (context) => builder(params),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:qlz_flash_cards_ui/features/module/module_module.dart';
+
 import 'route_builder.dart';
 import 'route_params.dart';
 
@@ -108,6 +110,22 @@ class AppRoutes {
           'folderId': folderId,
         },
       ).toMap(),
+    );
+  }
+
+  static Future<dynamic> navigateToModuleDetail(
+    BuildContext context, {
+    required String moduleId,
+    required String moduleName,
+  }) {
+    return Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ModuleModule.provideDetailScreen(
+          moduleId: moduleId,
+          moduleName: moduleName,
+        ),
+      ),
     );
   }
 

@@ -1,109 +1,174 @@
-// lib/features/screens/module/module_settings_screen.dart
-
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
+import 'package:qlz_flash_cards_ui/features/module/data/repositories/module_repository.dart';
+import 'package:qlz_flash_cards_ui/features/module/logic/cubit/module_settings_cubit.dart';
+import 'package:qlz_flash_cards_ui/features/module/logic/states/module_settings_state.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/buttons/qlz_button.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/cards/qlz_card.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/labels/qlz_label.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/layout/qlz_modal.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
-import 'package:qlz_flash_cards_ui/shared/widgets/cards/qlz_card.dart';
-import 'package:qlz_flash_cards_ui/shared/widgets/buttons/qlz_button.dart';
 
-final class ModuleSettingsScreen extends StatefulWidget {
-  const ModuleSettingsScreen({super.key});
-
+class ModuleSettingsScreen extends StatefulWidget {
+  final String moduleId;
+  const ModuleSettingsScreen({
+    super.key,
+    this.moduleId = 'new', // Default for new modules
+  });
   @override
   State<ModuleSettingsScreen> createState() => _ModuleSettingsScreenState();
 }
 
 class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
-  bool _isAutoSuggest = true;
-  String _selectedView = "Mọi người";
-  String _selectedEdit = "Chỉ tôi";
+  late ModuleSettingsCubit _cubit;
+
+  @override
+  void initState() {
+    super.initState();
+    _cubit = ModuleSettingsCubit(context.read<ModuleRepository>(), widget.moduleId);
+  }
+
+  @override
+  void dispose() {
+    _cubit.close();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0A092D),
-      appBar: const QlzAppBar(
-        title: 'Cài đặt tùy chọn',
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 24, 20, 12),
-              child: QlzLabel.muted('NGÔN NGỮ'),
+    return BlocProvider.value(
+      value: _cubit,
+      child: BlocBuilder<ModuleSettingsCubit, ModuleSettingsState>(
+        builder: (context, state) {
+          if (state.status == ModuleSettingsStatus.loading) {
+            return const Scaffold(
+              backgroundColor: Color(0xFF0A092D),
+              appBar: QlzAppBar(
+                title: 'Cài đặt tùy chọn',
+              ),
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+          if (state.status == ModuleSettingsStatus.failure) {
+            return Scaffold(
+              backgroundColor: const Color(0xFF0A092D),
+              appBar: const QlzAppBar(
+                title: 'Cài đặt tùy chọn',
+              ),
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, color: AppColors.error, size: 48),
+                    const SizedBox(height: 16),
+                    Text(
+                      state.errorMessage ?? 'Đã xảy ra lỗi',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    const SizedBox(height: 16),
+                    QlzButton(
+                      label: 'Thử lại',
+                      onPressed: () => _cubit.loadSettings(),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+          final settings = state.settings;
+          return Scaffold(
+            backgroundColor: const Color(0xFF0A092D),
+            appBar: const QlzAppBar(
+              title: 'Cài đặt tùy chọn',
             ),
-            _buildSettingSection([
-              _buildLanguageRow('Thuật ngữ', 'Chọn ngôn ngữ'),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Divider(color: Colors.white24, height: 1),
+            body: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(20, 24, 20, 12),
+                    child: QlzLabel.muted('NGÔN NGỮ'),
+                  ),
+                  _buildSettingSection([
+                    _buildLanguageRow(
+                      'Thuật ngữ',
+                      settings.termLanguage,
+                      onTap: () {
+                      },
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: Divider(color: Colors.white24, height: 1),
+                    ),
+                    _buildLanguageRow(
+                      'Định nghĩa',
+                      settings.definitionLanguage,
+                      onTap: () {
+                      },
+                    ),
+                  ]),
+                  const SizedBox(height: 32),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+                    child: QlzLabel.muted('TÙY CHỌN'),
+                  ),
+                  _buildSettingSection([
+                    _buildSwitchRow(
+                      'Gợi ý tự động',
+                      value: settings.autoSuggest,
+                      onChanged: (value) {
+                        _cubit.updateAutoSuggest(value);
+                      },
+                    ),
+                  ]),
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(20, 32, 20, 12),
+                    child: QlzLabel.muted('QUYỀN RIÊNG TƯ'),
+                  ),
+                  _buildSettingSection([
+                    _buildPermissionRow(
+                      'Ai có thể xem',
+                      settings.viewPermission,
+                      ['Mọi người', 'Chỉ tôi'],
+                      (value) {
+                        _cubit.updateViewPermission(value);
+                      },
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      child: Divider(color: Colors.white24, height: 1),
+                    ),
+                    _buildPermissionRow(
+                      'Ai có thể sửa',
+                      settings.editPermission,
+                      ['Mọi người', 'Chỉ tôi'],
+                      (value) {
+                        _cubit.updateEditPermission(value);
+                      },
+                    ),
+                  ]),
+                  const SizedBox(height: 32),
+                  if (widget.moduleId != 'new')
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: QlzButton.danger(
+                        label: 'Xóa học phần',
+                        icon: Icons.delete_outline,
+                        onPressed: () {
+                          _showDeleteConfirmation();
+                        },
+                        isFullWidth: true,
+                      ),
+                    ),
+                  const SizedBox(height: 32),
+                ],
               ),
-              _buildLanguageRow('Định nghĩa', 'Chọn ngôn ngữ'),
-            ]),
-            const SizedBox(height: 32),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: QlzLabel.muted('TÙY CHỌN'),
             ),
-            _buildSettingSection([
-              _buildSwitchRow(
-                'Gợi ý tự động',
-                value: _isAutoSuggest,
-                onChanged: (value) {
-                  setState(() {
-                    _isAutoSuggest = value;
-                  });
-                },
-              ),
-            ]),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 32, 20, 12),
-              child: QlzLabel.muted('QUYỀN RIÊNG TƯ'),
-            ),
-            _buildSettingSection([
-              _buildPermissionRow(
-                'Ai có thể xem',
-                _selectedView,
-                ['Mọi người', 'Chỉ tôi'],
-                (value) {
-                  setState(() {
-                    _selectedView = value;
-                  });
-                },
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
-                child: Divider(color: Colors.white24, height: 1),
-              ),
-              _buildPermissionRow(
-                'Ai có thể sửa',
-                _selectedEdit,
-                ['Mọi người', 'Chỉ tôi'],
-                (value) {
-                  setState(() {
-                    _selectedEdit = value;
-                  });
-                },
-              ),
-            ]),
-            const SizedBox(height: 32),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: QlzButton.danger(
-                label: 'Xóa học phần',
-                icon: Icons.delete_outline,
-                onPressed: () {
-                  _showDeleteConfirmation();
-                },
-                isFullWidth: true,
-              ),
-            ),
-            const SizedBox(height: 32),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -119,7 +184,6 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
       isDanger: true,
     ).then((confirmed) {
       if (confirmed) {
-        // TODO: Implement delete functionality
         Navigator.pop(context);
       }
     });
@@ -136,7 +200,11 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
     );
   }
 
-  Widget _buildLanguageRow(String title, String value) {
+  Widget _buildLanguageRow(
+    String title,
+    String value, {
+    VoidCallback? onTap,
+  }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       title: Text(
@@ -160,9 +228,7 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
           const Icon(Icons.chevron_right, color: Colors.white54, size: 20),
         ],
       ),
-      onTap: () {
-        // TODO: Implement language selection
-      },
+      onTap: onTap,
     );
   }
 

@@ -6,15 +6,15 @@ import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
 import 'package:qlz_flash_cards_ui/features/vocabulary/cubit/vocabulary_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/vocabulary/cubit/vocabulary_state.dart';
-import 'package:qlz_flash_cards_ui/features/vocabulary/widgets/flashcard_carousel.dart';
 import 'package:qlz_flash_cards_ui/features/vocabulary/widgets/module_user_info.dart';
 import 'package:qlz_flash_cards_ui/features/vocabulary/widgets/study_options_list.dart';
 import 'package:qlz_flash_cards_ui/features/vocabulary/widgets/study_progress.dart';
 import 'package:qlz_flash_cards_ui/features/vocabulary/widgets/term_list.dart';
-import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
-import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_loading_state.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/cards/qlz_flashcard_carousel.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_empty_state.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_error_view.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_loading_state.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
 
 final class VocabularyScreen extends StatelessWidget {
   final String moduleName;
@@ -99,7 +99,7 @@ final class VocabularyScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        FlashcardCarousel(flashcards: flashcards),
+                        QlzFlashcardCarousel(flashcards: flashcards),
                         const SizedBox(height: 20),
                         const ModuleUserInfo(),
                         const SizedBox(height: 20),
