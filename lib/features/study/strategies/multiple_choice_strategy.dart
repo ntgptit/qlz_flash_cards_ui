@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:qlz_flash_cards_ui/features/study/data/study_session_state.dart';
 import 'package:qlz_flash_cards_ui/features/study/widgets/option_list.dart';
 import 'package:qlz_flash_cards_ui/features/vocabulary/data/flashcard.dart';
-import '../models/study_session_state.dart';
+
 import '../strategies/study_strategy.dart';
 
 class MultipleChoiceStrategy implements StudyStrategy {
