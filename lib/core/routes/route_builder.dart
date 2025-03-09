@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
-import 'route_params.dart';
-import 'route_logger.dart';
+import 'package:qlz_flash_cards_ui/features/library/library_module.dart';
+
 import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
@@ -9,7 +9,6 @@ import '../../features/class/create_class_screen.dart';
 import '../../features/flashcard/screens/flashcard_study_mode_screen.dart';
 import '../../features/folder/screens/create_folder_screen.dart';
 import '../../features/home/home_screen.dart';
-import '../../features/library/library_screen.dart';
 import '../../features/module/screens/create_study_module_screen.dart';
 import '../../features/module/screens/list_study_module_of_folder_screen.dart';
 import '../../features/module/screens/module_detail_screen.dart';
@@ -20,6 +19,8 @@ import '../../features/quiz/screens/quiz_screen.dart';
 import '../../features/quiz/screens/quiz_screen_settings.dart';
 import '../../features/study/screens/study_settings_screen.dart';
 import '../../features/welcome_screen.dart';
+import 'route_logger.dart';
+import 'route_params.dart';
 
 /// Xây dựng các màn hình dựa trên route settings.
 class RouteBuilder {
@@ -29,7 +30,7 @@ class RouteBuilder {
     AppRoutes.register: (_) => const RegisterScreen(),
     AppRoutes.forgotPassword: (_) => const ForgotPasswordScreen(),
     AppRoutes.home: (_) => const HomeScreen(),
-    AppRoutes.library: (_) => const LibraryScreen(),
+    AppRoutes.library: (_) => LibraryModule.create(),
     AppRoutes.folderDetail: (params) => ListStudyModuleOfFolderScreen(
           folderName: params.getString('folderName', 'Unknown'),
           folderId: params.getString('folderId'),
@@ -39,7 +40,10 @@ class RouteBuilder {
           folderName: params.getString('folderName', 'Unknown'),
           folderId: params.getString('folderId'),
         ),
-    AppRoutes.moduleDetail: (_) => const ModuleDetailScreen(),
+    AppRoutes.moduleDetail: (params) => ModuleDetailScreen(
+          id: params.getString('id', ''),
+          name: params.getString('name', 'Unknown'),
+        ),
     AppRoutes.studyFlashcards: (params) => FlashcardStudyModeScreen(
           flashcards: params.getFlashcards('flashcards'),
           initialIndex: params.getInt('initialIndex', 0),
@@ -86,6 +90,13 @@ class RouteBuilder {
     final builder = _routeBuilders[settings.name] ?? _errorScreenBuilder;
 
     try {
+      if (settings.name == AppRoutes.library) {
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (context) => LibraryModule.create(),
+        );
+      }
+
       return MaterialPageRoute(
         settings: settings,
         builder: (context) => builder(params),

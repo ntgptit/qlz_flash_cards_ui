@@ -1,14 +1,14 @@
 // lib/presentation/screens/module/module_detail_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/buttons/qlz_button.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/cards/qlz_card.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/utils/qlz_avatar.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/utils/qlz_chip.dart';
-import 'package:qlz_flash_cards_ui/shared/widgets/buttons/qlz_button.dart';
 
 final class ModuleDetailScreen extends StatelessWidget {
-  const ModuleDetailScreen({super.key});
+  const ModuleDetailScreen({super.key, required String id, required String name});
 
   @override
   Widget build(BuildContext context) {
