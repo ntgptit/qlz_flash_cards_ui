@@ -20,6 +20,9 @@ final class QlzButton extends StatelessWidget {
   final bool isFullWidth;
   final bool isLoading;
   final String? tooltip;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
+  final Color? borderColor;
 
   const QlzButton({
     super.key,
@@ -33,6 +36,9 @@ final class QlzButton extends StatelessWidget {
     this.isFullWidth = false,
     this.isLoading = false,
     this.tooltip,
+    this.backgroundColor,
+    this.foregroundColor,
+    this.borderColor,
   });
 
   /// Constructor tiện lợi cho Primary Button
@@ -47,6 +53,9 @@ final class QlzButton extends StatelessWidget {
     this.isFullWidth = false,
     this.isLoading = false,
     this.tooltip,
+    this.backgroundColor,
+    this.foregroundColor,
+    this.borderColor,
   }) : variant = QlzButtonVariant.primary;
 
   /// Constructor tiện lợi cho Secondary Button
@@ -61,6 +70,9 @@ final class QlzButton extends StatelessWidget {
     this.isFullWidth = false,
     this.isLoading = false,
     this.tooltip,
+    this.backgroundColor,
+    this.foregroundColor,
+    this.borderColor,
   }) : variant = QlzButtonVariant.secondary;
 
   /// Constructor tiện lợi cho Ghost Button
@@ -75,6 +87,9 @@ final class QlzButton extends StatelessWidget {
     this.isFullWidth = false,
     this.isLoading = false,
     this.tooltip,
+    this.backgroundColor,
+    this.foregroundColor,
+    this.borderColor,
   }) : variant = QlzButtonVariant.ghost;
 
   /// Constructor tiện lợi cho Danger Button
@@ -89,6 +104,9 @@ final class QlzButton extends StatelessWidget {
     this.isFullWidth = false,
     this.isLoading = false,
     this.tooltip,
+    this.backgroundColor,
+    this.foregroundColor,
+    this.borderColor,
   }) : variant = QlzButtonVariant.danger;
 
   @override
@@ -99,7 +117,17 @@ final class QlzButton extends StatelessWidget {
     Widget button = _buildButton(context, padding, textStyle);
 
     if (tooltip != null) {
-      button = Tooltip(message: tooltip!, child: button);
+      button = Tooltip(
+        message: tooltip!,
+        textStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: AppColors.darkText,
+            ),
+        decoration: BoxDecoration(
+          color: AppColors.darkSurface,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: button,
+      );
     }
 
     if (isFullWidth) {
@@ -111,28 +139,49 @@ final class QlzButton extends StatelessWidget {
 
   /// Build the appropriate button based on variant
   Widget _buildButton(
-      BuildContext context, EdgeInsets padding, TextStyle textStyle) {
+    BuildContext context,
+    EdgeInsets padding,
+    TextStyle textStyle,
+  ) {
     final Widget content = _buildButtonContent(textStyle);
 
     return switch (variant) {
       QlzButtonVariant.primary => ElevatedButton(
           onPressed: isLoading ? null : onPressed,
-          style: _getButtonStyle(AppColors.primary, padding),
+          style: _getButtonStyle(
+            backgroundColor: backgroundColor ?? AppColors.primary,
+            foregroundColor: foregroundColor ?? AppColors.darkText,
+            padding: padding,
+            borderColor: borderColor,
+          ),
           child: content,
         ),
       QlzButtonVariant.secondary => OutlinedButton(
           onPressed: isLoading ? null : onPressed,
-          style: _getOutlineButtonStyle(padding),
+          style: _getOutlineButtonStyle(
+            backgroundColor: backgroundColor ?? Colors.transparent,
+            foregroundColor: foregroundColor ?? AppColors.darkText,
+            borderColor: borderColor ?? AppColors.darkText,
+            padding: padding,
+          ),
           child: content,
         ),
       QlzButtonVariant.ghost => TextButton(
           onPressed: isLoading ? null : onPressed,
-          style: _getGhostButtonStyle(padding),
+          style: _getGhostButtonStyle(
+            foregroundColor: foregroundColor ?? AppColors.darkText,
+            padding: padding,
+          ),
           child: content,
         ),
       QlzButtonVariant.danger => ElevatedButton(
           onPressed: isLoading ? null : onPressed,
-          style: _getButtonStyle(AppColors.error, padding),
+          style: _getButtonStyle(
+            backgroundColor: backgroundColor ?? AppColors.error,
+            foregroundColor: foregroundColor ?? AppColors.darkText,
+            padding: padding,
+            borderColor: borderColor,
+          ),
           child: content,
         ),
     };
@@ -141,12 +190,14 @@ final class QlzButton extends StatelessWidget {
   /// Build the content inside the button (icon, label, loading indicator)
   Widget _buildButtonContent(TextStyle textStyle) {
     if (isLoading) {
-      return const SizedBox(
+      return SizedBox(
         width: 24,
         height: 24,
         child: CircularProgressIndicator(
           strokeWidth: 2,
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          valueColor: AlwaysStoppedAnimation<Color>(
+            foregroundColor ?? AppColors.darkText,
+          ),
         ),
       );
     }
@@ -168,11 +219,10 @@ final class QlzButton extends StatelessWidget {
       return Row(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment:
-            CrossAxisAlignment.center, // Đảm bảo icon và text căn giữa
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           leadingWidget,
-          const SizedBox(width: 8), // Giữ khoảng cách icon và text hợp lý
+          const SizedBox(width: 8),
           Text(label, style: textStyle),
         ],
       );
@@ -182,32 +232,55 @@ final class QlzButton extends StatelessWidget {
   }
 
   /// Get button style for primary and danger variants
-  ButtonStyle _getButtonStyle(Color backgroundColor, EdgeInsets padding) {
+  ButtonStyle _getButtonStyle({
+    required Color backgroundColor,
+    required Color foregroundColor,
+    required EdgeInsets padding,
+    Color? borderColor,
+  }) {
     return ElevatedButton.styleFrom(
       backgroundColor: backgroundColor,
-      foregroundColor: Colors.white,
+      foregroundColor: foregroundColor,
       padding: padding,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: borderColor != null
+            ? BorderSide(color: borderColor)
+            : BorderSide.none,
+      ),
       elevation: 0,
     );
   }
 
   /// Get outline button style for secondary variant
-  ButtonStyle _getOutlineButtonStyle(EdgeInsets padding) {
+  ButtonStyle _getOutlineButtonStyle({
+    required Color backgroundColor,
+    required Color foregroundColor,
+    required Color borderColor,
+    required EdgeInsets padding,
+  }) {
     return OutlinedButton.styleFrom(
-      foregroundColor: Colors.white,
-      side: const BorderSide(color: Colors.white),
+      backgroundColor: backgroundColor,
+      foregroundColor: foregroundColor,
+      side: BorderSide(color: borderColor),
       padding: padding,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
     );
   }
 
   /// Get ghost button style
-  ButtonStyle _getGhostButtonStyle(EdgeInsets padding) {
+  ButtonStyle _getGhostButtonStyle({
+    required Color foregroundColor,
+    required EdgeInsets padding,
+  }) {
     return TextButton.styleFrom(
-      foregroundColor: Colors.white,
+      foregroundColor: foregroundColor,
       padding: padding,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
     );
   }
 
@@ -225,23 +298,26 @@ final class QlzButton extends StatelessWidget {
 
   /// Get text style based on size and variant
   TextStyle _getTextStyle(BuildContext context) {
-    return TextStyle(
-      color: _getTextColor(),
-      fontWeight: FontWeight.w500,
-      fontSize: switch (size) {
-        QlzButtonSize.small => 14,
-        QlzButtonSize.medium => 16,
-        QlzButtonSize.large => 18,
-      },
-    );
+    return Theme.of(context).textTheme.labelLarge!.copyWith(
+          color: _getTextColor(),
+          fontWeight: FontWeight.w500,
+          fontSize: switch (size) {
+            QlzButtonSize.small => 14,
+            QlzButtonSize.medium => 16,
+            QlzButtonSize.large => 18,
+          },
+        );
   }
 
-  /// Get text color based on variant
+  /// Get text color based on variant and foregroundColor
   Color _getTextColor() {
-    return switch (variant) {
-      QlzButtonVariant.primary || QlzButtonVariant.danger => Colors.white,
-      QlzButtonVariant.secondary || QlzButtonVariant.ghost => Colors.white,
-    };
+    return foregroundColor ??
+        switch (variant) {
+          QlzButtonVariant.primary => AppColors.darkText,
+          QlzButtonVariant.secondary => AppColors.darkText,
+          QlzButtonVariant.ghost => AppColors.darkText,
+          QlzButtonVariant.danger => AppColors.darkText,
+        };
   }
 
   /// Get icon size based on button size
@@ -255,11 +331,12 @@ final class QlzButton extends StatelessWidget {
 
   /// Get icon color to contrast with button background
   Color _getIconColor() {
-    return switch (variant) {
-      QlzButtonVariant.primary ||
-      QlzButtonVariant.danger =>
-        Colors.white70, // Giúp icon dễ nhìn hơn
-      QlzButtonVariant.secondary || QlzButtonVariant.ghost => Colors.white,
-    };
+    return foregroundColor ??
+        switch (variant) {
+          QlzButtonVariant.primary => AppColors.darkTextSecondary,
+          QlzButtonVariant.secondary => AppColors.darkText,
+          QlzButtonVariant.ghost => AppColors.darkText,
+          QlzButtonVariant.danger => AppColors.darkTextSecondary,
+        };
   }
 }

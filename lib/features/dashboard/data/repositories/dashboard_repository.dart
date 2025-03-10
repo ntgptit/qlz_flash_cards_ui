@@ -1,223 +1,132 @@
-// lib/features/dashboard/data/repositories/dashboard_repository.dart
-
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:qlz_flash_cards_ui/core/utils/time_formatter.dart';
+import 'package:qlz_flash_cards_ui/features/dashboard/data/models/study_history_model.dart';
+import 'package:qlz_flash_cards_ui/features/dashboard/data/models/study_stats_model.dart';
+import 'package:qlz_flash_cards_ui/features/module/data/models/study_module_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../../features/module/data/models/study_module_model.dart';
-import '../models/study_history_model.dart';
-import '../models/study_stats_model.dart';
-
-/// Repository for dashboard data, handling user study statistics and history
 class DashboardRepository {
   final Dio _dio;
   final SharedPreferences _prefs;
-
-  // Cache keys
   static const String _statsKey = 'dashboard_study_stats';
   static const String _historyKey = 'dashboard_study_history';
   static const String _recommendationsKey = 'dashboard_recommendations';
   static const String _lastSyncKey = 'dashboard_last_sync';
-
-  // Flag for mock data (for development)
   final bool _useMockData = true;
 
   DashboardRepository(this._dio, this._prefs);
 
-  /// Get user's study statistics
-  Future<StudyStatsModel> getStudyStats({bool forceRefresh = false}) async {
+  Future<T> _fetchWithCache<T>({
+    required String cacheKey,
+    required String apiEndpoint,
+    required T Function(dynamic) fromJson, // Thay đổi để hỗ trợ dynamic
+    required T Function() mockData,
+    required T emptyData,
+    bool forceRefresh = false,
+  }) async {
     if (_useMockData) {
       await Future.delayed(const Duration(milliseconds: 800));
-      return _getMockStudyStats();
+      return mockData();
     }
 
     try {
-      // Use cache if available and not forcing refresh
       if (!forceRefresh && _isCacheValid()) {
-        final cachedData = _prefs.getString(_statsKey);
+        final cachedData = _prefs.getString(cacheKey);
         if (cachedData != null) {
           try {
-            return StudyStatsModel.fromJson(
-                jsonDecode(cachedData) as Map<String, dynamic>);
+            return fromJson(jsonDecode(cachedData));
           } catch (e) {
-            debugPrint('Error decoding cached stats: $e');
+            debugPrint('Error decoding cached data for $cacheKey: $e');
           }
         }
       }
 
-      // Fetch from API
-      final response = await _dio.get('/api/user/study-stats');
-
+      final response = await _dio.get(apiEndpoint);
       if (response.statusCode == 200) {
-        final stats =
-            StudyStatsModel.fromJson(response.data as Map<String, dynamic>);
-
-        // Cache the result
-        await _prefs.setString(_statsKey, jsonEncode(stats.toJson()));
+        final data = fromJson(response.data);
+        // Xử lý lưu cache dựa trên kiểu của T
+        if (data is StudyStatsModel) {
+          await _prefs.setString(cacheKey, jsonEncode(data.toJson()));
+        } else if (data is StudyHistoryModel) {
+          await _prefs.setString(cacheKey, jsonEncode(data.toJson()));
+        } else if (data is List<StudyModule>) {
+          await _prefs.setString(
+              cacheKey, jsonEncode(data.map((e) => e.toJson()).toList()));
+        } else {
+          debugPrint('Unsupported type for caching: ${T.toString()}');
+        }
         await _prefs.setString(_lastSyncKey, DateTime.now().toIso8601String());
-
-        return stats;
-      } else {
-        throw Exception('Failed to load study stats: ${response.statusCode}');
-      }
-    } catch (e) {
-      debugPrint('Error fetching study stats: $e');
-
-      // Try to use cached data if available
-      final cachedData = _prefs.getString(_statsKey);
-      if (cachedData != null) {
-        try {
-          return StudyStatsModel.fromJson(
-              jsonDecode(cachedData) as Map<String, dynamic>);
-        } catch (e) {
-          debugPrint('Error using cached stats: $e');
-        }
-      }
-
-      // Return empty stats if all else fails
-      return StudyStatsModel.empty();
-    }
-  }
-
-  /// Get user's study history
-  Future<StudyHistoryModel> getStudyHistory({bool forceRefresh = false}) async {
-    if (_useMockData) {
-      await Future.delayed(const Duration(milliseconds: 800));
-      return _getMockStudyHistory();
-    }
-
-    try {
-      // Use cache if available and not forcing refresh
-      if (!forceRefresh && _isCacheValid()) {
-        final cachedData = _prefs.getString(_historyKey);
-        if (cachedData != null) {
-          try {
-            return StudyHistoryModel.fromJson(
-                jsonDecode(cachedData) as Map<String, dynamic>);
-          } catch (e) {
-            debugPrint('Error decoding cached history: $e');
-          }
-        }
-      }
-
-      // Fetch from API
-      final response = await _dio.get('/api/user/study-history');
-
-      if (response.statusCode == 200) {
-        final history =
-            StudyHistoryModel.fromJson(response.data as Map<String, dynamic>);
-
-        // Cache the result
-        await _prefs.setString(_historyKey, jsonEncode(history.toJson()));
-        await _prefs.setString(_lastSyncKey, DateTime.now().toIso8601String());
-
-        return history;
-      } else {
-        throw Exception('Failed to load study history: ${response.statusCode}');
-      }
-    } catch (e) {
-      debugPrint('Error fetching study history: $e');
-
-      // Try to use cached data if available
-      final cachedData = _prefs.getString(_historyKey);
-      if (cachedData != null) {
-        try {
-          return StudyHistoryModel.fromJson(
-              jsonDecode(cachedData) as Map<String, dynamic>);
-        } catch (e) {
-          debugPrint('Error using cached history: $e');
-        }
-      }
-
-      // Return empty history if all else fails
-      return StudyHistoryModel.empty();
-    }
-  }
-
-  /// Get recommended study modules
-  Future<List<StudyModule>> getRecommendedModules(
-      {bool forceRefresh = false}) async {
-    if (_useMockData) {
-      await Future.delayed(const Duration(milliseconds: 800));
-      return _getMockRecommendedModules();
-    }
-
-    try {
-      // Use cache if available and not forcing refresh
-      if (!forceRefresh && _isCacheValid()) {
-        final cachedData = _prefs.getString(_recommendationsKey);
-        if (cachedData != null) {
-          try {
-            final List<dynamic> decoded =
-                jsonDecode(cachedData) as List<dynamic>;
-            return decoded
-                .map((e) => StudyModule.fromJson(e as Map<String, dynamic>))
-                .toList();
-          } catch (e) {
-            debugPrint('Error decoding cached recommendations: $e');
-          }
-        }
-      }
-
-      // Fetch from API
-      final response = await _dio.get('/api/user/recommendations');
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = response.data as List<dynamic>;
-        final modules = data
-            .map((e) => StudyModule.fromJson(e as Map<String, dynamic>))
-            .toList();
-
-        // Cache the result
-        await _prefs.setString(_recommendationsKey,
-            jsonEncode(modules.map((e) => e.toJson()).toList()));
-        await _prefs.setString(_lastSyncKey, DateTime.now().toIso8601String());
-
-        return modules;
+        return data;
       } else {
         throw Exception(
-            'Failed to load recommendations: ${response.statusCode}');
+            'Failed to load data from $apiEndpoint: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error fetching recommendations: $e');
-
-      // Try to use cached data if available
-      final cachedData = _prefs.getString(_recommendationsKey);
+      debugPrint('Error fetching data from $apiEndpoint: $e');
+      final cachedData = _prefs.getString(cacheKey);
       if (cachedData != null) {
         try {
-          final List<dynamic> decoded = jsonDecode(cachedData) as List<dynamic>;
-          return decoded
-              .map((e) => StudyModule.fromJson(e as Map<String, dynamic>))
-              .toList();
+          return fromJson(jsonDecode(cachedData));
         } catch (e) {
-          debugPrint('Error using cached recommendations: $e');
+          debugPrint('Error using cached data for $cacheKey: $e');
         }
       }
-
-      // Return empty list if all else fails
-      return [];
+      return emptyData;
     }
   }
 
-  /// Record a completed study session
+  Future<StudyStatsModel> getStudyStats({bool forceRefresh = false}) async {
+    return _fetchWithCache(
+      cacheKey: _statsKey,
+      apiEndpoint: '/api/user/study-stats',
+      fromJson: (json) =>
+          StudyStatsModel.fromJson(json as Map<String, dynamic>),
+      mockData: _getMockStudyStats,
+      emptyData: StudyStatsModel.empty(),
+      forceRefresh: forceRefresh,
+    );
+  }
+
+  Future<StudyHistoryModel> getStudyHistory({bool forceRefresh = false}) async {
+    return _fetchWithCache(
+      cacheKey: _historyKey,
+      apiEndpoint: '/api/user/study-history',
+      fromJson: (json) =>
+          StudyHistoryModel.fromJson(json as Map<String, dynamic>),
+      mockData: _getMockStudyHistory,
+      emptyData: StudyHistoryModel.empty(),
+      forceRefresh: forceRefresh,
+    );
+  }
+
+  Future<List<StudyModule>> getRecommendedModules(
+      {bool forceRefresh = false}) async {
+    return _fetchWithCache(
+      cacheKey: _recommendationsKey,
+      apiEndpoint: '/api/user/recommendations',
+      fromJson: (json) => (json as List<dynamic>)
+          .map((e) => StudyModule.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      mockData: _getMockRecommendedModules,
+      emptyData: [],
+      forceRefresh: forceRefresh,
+    );
+  }
+
   Future<bool> recordStudySession(StudySessionEntry session) async {
     if (_useMockData) {
       await Future.delayed(const Duration(milliseconds: 500));
-
       try {
-        // Update local history with the new session
         final currentHistory = await getStudyHistory();
         final updatedHistory = currentHistory.addSession(session);
-
-        // Update local stats
         final currentStats = await getStudyStats();
         final now = DateTime.now();
         final isToday = session.date.year == now.year &&
             session.date.month == now.month &&
             session.date.day == now.day;
-
         final updatedStats = currentStats.copyWith(
           totalTermsLearned:
               currentStats.totalTermsLearned + session.termsLearned,
@@ -226,40 +135,30 @@ class DashboardRepository {
               currentStats.totalStudyTimeSeconds + session.durationSeconds,
           lastStudyDate: isToday ? now : currentStats.lastStudyDate,
         );
-
-        // Cache the updated data
         await _prefs.setString(
             _historyKey, jsonEncode(updatedHistory.toJson()));
         await _prefs.setString(_statsKey, jsonEncode(updatedStats.toJson()));
-
         return true;
       } catch (e) {
         debugPrint('Error recording study session locally: $e');
         return false;
       }
     }
-
     try {
-      // Send to API
       final response = await _dio.post(
         '/api/user/record-session',
         data: session.toJson(),
       );
-
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Update local cache
         try {
           final currentHistory = await getStudyHistory();
           final updatedHistory = currentHistory.addSession(session);
           await _prefs.setString(
               _historyKey, jsonEncode(updatedHistory.toJson()));
-
-          // Force refresh stats to get the updated version from the server
           await getStudyStats(forceRefresh: true);
         } catch (e) {
           debugPrint('Error updating local cache: $e');
         }
-
         return true;
       } else {
         throw Exception(
@@ -271,17 +170,13 @@ class DashboardRepository {
     }
   }
 
-  /// Check if cache is still valid (less than 1 hour old)
   bool _isCacheValid() {
     final lastSyncStr = _prefs.getString(_lastSyncKey);
     if (lastSyncStr == null) return false;
-
     try {
       final lastSync = DateTime.parse(lastSyncStr);
       final now = DateTime.now();
       final difference = now.difference(lastSync);
-
-      // Cache is valid if less than 1 hour old
       return difference.inHours < 1;
     } catch (e) {
       debugPrint('Error parsing last sync date: $e');
@@ -289,62 +184,45 @@ class DashboardRepository {
     }
   }
 
-  /// Get mock study stats for development
   StudyStatsModel _getMockStudyStats() {
     final now = DateTime.now();
     return StudyStatsModel(
       totalTermsLearned: 856,
       totalDifficultTerms: 124,
       totalSessionsCompleted: 57,
-      totalStudyTimeSeconds: 103245, // About 28.7 hours
+      totalStudyTimeSeconds: 103245,
       currentStreak: 11,
       longestStreak: 14,
       lastStudyDate: DateTime(now.year, now.month, now.day - 1),
     );
   }
 
-  /// Get mock study history for development
   StudyHistoryModel _getMockStudyHistory() {
     final now = DateTime.now();
     final dailyStudyTime = <String, int>{};
     final dailyTermsLearned = <String, int>{};
     final sessions = <StudySessionEntry>[];
-
-    // Generate data for the past 30 days
     for (int i = 0; i < 30; i++) {
       final date = now.subtract(Duration(days: i));
-      final dateString = _formatDateToString(date);
-
-      // Create some realistic patterns in the data
-      // Users study more on weekdays
+      final dateString = TimeFormatter.formatDateToString(date);
       if (date.weekday <= 5) {
-        dailyStudyTime[dateString] =
-            1800 + (500 * date.weekday); // More study time on later weekdays
+        dailyStudyTime[dateString] = 1800 + (500 * date.weekday);
         dailyTermsLearned[dateString] = 20 + (5 * date.weekday);
       } else {
-        // Weekend has lower study time
         dailyStudyTime[dateString] = 900;
         dailyTermsLearned[dateString] = 15;
       }
-
-      // Skip some days to create gaps
       if (i == 12 || i == 13 || i == 20) {
         dailyStudyTime[dateString] = 0;
         dailyTermsLearned[dateString] = 0;
       }
-
-      // Create sessions for days with study time
       if (dailyStudyTime[dateString]! > 0) {
-        // Each day might have 1-3 sessions
         final sessionsCount = 1 + (date.day % 3);
-
         for (int j = 0; j < sessionsCount; j++) {
           final sessionTime = dailyStudyTime[dateString]! ~/ sessionsCount;
           final termsStudied = dailyTermsLearned[dateString]! ~/ sessionsCount;
-
           sessions.add(StudySessionEntry(
-            date: date.add(Duration(
-                hours: 8 + j * 4)), // Space sessions throughout the day
+            date: date.add(Duration(hours: 8 + j * 4)),
             moduleId: 'module-${j + 1}',
             moduleName: 'Tiếng Hàn Chương ${j + 1}',
             termsStudied: termsStudied + 5,
@@ -354,7 +232,6 @@ class DashboardRepository {
         }
       }
     }
-
     return StudyHistoryModel(
       dailyStudyTime: dailyStudyTime,
       dailyTermsLearned: dailyTermsLearned,
@@ -362,7 +239,6 @@ class DashboardRepository {
     );
   }
 
-  /// Get mock recommended modules for development
   List<StudyModule> _getMockRecommendedModules() {
     final now = DateTime.now();
     return [
@@ -397,10 +273,5 @@ class DashboardRepository {
         createdAt: now.subtract(const Duration(days: 5)),
       ),
     ];
-  }
-
-  /// Format a date to string (YYYY-MM-DD)
-  String _formatDateToString(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 }

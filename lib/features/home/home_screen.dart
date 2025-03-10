@@ -1,6 +1,5 @@
-// lib/features/home/home_screen.dart
-
 import 'package:flutter/material.dart';
+import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/features/dashboard/dashboard_module.dart';
 import 'package:qlz_flash_cards_ui/features/library/presentation/screens/library_screen.dart';
 import 'package:qlz_flash_cards_ui/features/profile/profile_screen.dart';
@@ -21,11 +20,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize screens with the dashboard
     _screens = [
-      DashboardModule.create(), // Dashboard as home screen
+      DashboardModule.create(),
       const SolutionsTab(),
-      const Center(child: Icon(Icons.add, size: 40, color: Colors.white)),
+      const Center(child: Icon(Icons.add, size: 40, color: AppColors.darkText)),
       const LibraryScreen(),
       const ProfileScreen(),
     ];
@@ -34,13 +32,13 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A092D),
+      backgroundColor: AppColors.darkBackground,
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
       ),
       bottomNavigationBar: NavigationBar(
-        backgroundColor: const Color(0xFF12113A),
+        backgroundColor: AppColors.darkSurface,
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) {
           if (index == 2) {
@@ -49,30 +47,36 @@ class _HomeScreenState extends State<HomeScreen> {
             setState(() => _currentIndex = index);
           }
         },
+        indicatorColor: AppColors.primary.withOpacity(0.2),
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
+            icon: Icon(Icons.home_outlined, color: AppColors.darkTextSecondary),
+            selectedIcon: Icon(Icons.home, color: AppColors.primary),
             label: 'Trang chủ',
           ),
           NavigationDestination(
-            icon: Icon(Icons.lightbulb_outline),
-            selectedIcon: Icon(Icons.lightbulb),
+            icon: Icon(Icons.lightbulb_outline,
+                color: AppColors.darkTextSecondary),
+            selectedIcon: Icon(Icons.lightbulb, color: AppColors.primary),
             label: 'Lời giải',
           ),
           NavigationDestination(
-            icon: Icon(Icons.add_circle_outline),
-            selectedIcon: Icon(Icons.add_circle),
+            icon: Icon(Icons.add_circle_outline,
+                color: AppColors.darkTextSecondary),
+            selectedIcon: Icon(Icons.add_circle, color: AppColors.primary),
             label: 'Tạo',
           ),
           NavigationDestination(
-            icon: Icon(Icons.folder_outlined),
-            selectedIcon: Icon(Icons.folder),
+            icon:
+                Icon(Icons.folder_outlined, color: AppColors.darkTextSecondary),
+            selectedIcon: Icon(Icons.folder, color: AppColors.primary),
             label: 'Thư viện',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
+            icon:
+                Icon(Icons.person_outline, color: AppColors.darkTextSecondary),
+            selectedIcon: Icon(Icons.person, color: AppColors.primary),
             label: 'Hồ sơ',
           ),
         ],
@@ -83,9 +87,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showCreateModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF12113A),
+      backgroundColor: AppColors.darkSurface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
       ),
       builder: (context) => Padding(
         padding: const EdgeInsets.all(16.0),
@@ -97,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icons.style_outlined,
               title: 'Học phần',
               subtitle: 'Tạo bộ thẻ ghi nhớ mới',
-              color: Colors.blue,
+              color: AppColors.primary,
               onTap: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/create-study-module');
@@ -109,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icons.folder_outlined,
               title: 'Thư mục',
               subtitle: 'Tổ chức học phần của bạn',
-              color: Colors.orange,
+              color: AppColors.warning,
               onTap: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/create-folder');
@@ -121,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icons.school_outlined,
               title: 'Lớp học',
               subtitle: 'Tạo không gian học tập chung',
-              color: Colors.purple,
+              color: AppColors.secondary,
               onTap: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/create-class');
@@ -147,8 +151,9 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1D3D),
+          color: AppColors.darkCard,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.darkBorder),
         ),
         child: Row(
           children: [
@@ -160,25 +165,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: AppColors.darkText,
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                   Text(
                     subtitle,
-                    style: const TextStyle(
-                      color: Color.fromARGB(180, 255, 255, 255),
-                      fontSize: 14,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.darkTextSecondary,
+                        ),
                   ),
                 ],
               ),
             ),
             const Icon(
               Icons.arrow_forward_ios,
-              color: Color.fromARGB(180, 255, 255, 255),
+              color: AppColors.darkTextSecondary,
               size: 16,
             ),
           ],
@@ -200,26 +203,25 @@ class SolutionsTab extends StatelessWidget {
         children: [
           const Icon(
             Icons.lightbulb_outline,
-            color: Colors.amber,
+            color: AppColors.warning,
             size: 48,
           ),
           const SizedBox(height: 16),
-          const QlzLabel(
+          QlzLabel(
             'Lời giải',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: AppColors.darkText,
+                  fontWeight: FontWeight.bold,
+                ),
           ),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Text(
               'Đang phát triển tính năng giúp bạn giải đáp các bài tập',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
-                fontSize: 16,
-              ),
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppColors.darkTextSecondary,
+                  ),
               textAlign: TextAlign.center,
             ),
           ),

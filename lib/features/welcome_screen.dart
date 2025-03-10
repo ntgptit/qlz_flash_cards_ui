@@ -1,5 +1,3 @@
-// lib/features/welcome_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
@@ -18,52 +16,43 @@ final class WelcomeScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Avatar circle image
               Container(
                 width: 120,
                 height: 120,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  image: DecorationImage(
+                  border: Border.all(
+                    color: AppColors.darkBorder,
+                    width: 2,
+                  ),
+                  image: const DecorationImage(
                     image: AssetImage('assets/images/auth_avatar.jpg'),
                     fit: BoxFit.cover,
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
-
-              // Main text
-              const Text(
+              const SizedBox(height: 32),
+              Text(
                 'Cách tốt nhất để học. Đăng ký miễn phí.',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      color: AppColors.darkText,
+                      fontWeight: FontWeight.bold,
+                    ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
-
-              // Terms text
+              const SizedBox(height: 12),
               Text(
                 'Bằng việc đăng ký, bạn chấp nhận Điều khoản dịch vụ và Chính sách quyền riêng tư của Quizlet',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.7),
-                  fontSize: 14,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.darkTextSecondary,
+                    ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 32),
-
-              // Google Sign In Button
-              _buildGoogleButton(),
+              const SizedBox(height: 40),
+              _buildGoogleButton(context),
               const SizedBox(height: 16),
-
-              // Email Sign Up Button
               _buildEmailButton(context),
-              const SizedBox(height: 24),
-
-              // Sign In Link
+              const SizedBox(height: 32),
               _buildSignInLink(context),
             ],
           ),
@@ -72,20 +61,21 @@ final class WelcomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildGoogleButton() {
-    return Builder(
-      builder: (context) => QlzButton(
-        label: 'Tiếp tục với Google',
-        imageAssetPath: 'assets/icons/google_icon.png',
-        imageSize: 24,
-        onPressed: () {
-          // Implement Google sign-in
-          Navigator.of(context).pushReplacementNamed(AppRoutes.home);
-        },
-        isFullWidth: true,
-        variant: QlzButtonVariant.primary,
-        size: QlzButtonSize.large,
-      ),
+  Widget _buildGoogleButton(BuildContext context) {
+    return QlzButton(
+      label: 'Tiếp tục với Google',
+      imageAssetPath: 'assets/icons/google_icon.png',
+      imageSize: 24,
+      onPressed: () {
+        // Implement Google sign-in
+        Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+      },
+      isFullWidth: true,
+      variant: QlzButtonVariant.primary,
+      size: QlzButtonSize.large,
+      backgroundColor: AppColors.darkCard,
+      foregroundColor: AppColors.darkText,
+      borderColor: AppColors.darkBorder,
     );
   }
 
@@ -96,6 +86,9 @@ final class WelcomeScreen extends StatelessWidget {
       onPressed: () => Navigator.pushNamed(context, AppRoutes.register),
       isFullWidth: true,
       size: QlzButtonSize.large,
+      backgroundColor: AppColors.darkSurface,
+      foregroundColor: AppColors.primary,
+      borderColor: AppColors.primary.withOpacity(0.5),
     );
   }
 
@@ -105,23 +98,20 @@ final class WelcomeScreen extends StatelessWidget {
       children: [
         Text(
           'Đã có tài khoản? ',
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.7),
-            fontSize: 16,
-          ),
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: AppColors.darkTextSecondary,
+              ),
         ),
         TextButton(
           onPressed: () => Navigator.pushNamed(context, AppRoutes.login),
           style: TextButton.styleFrom(
             foregroundColor: AppColors.primary,
+            textStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
           ),
-          child: const Text(
-            'Đăng nhập',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
-          ),
+          child: const Text('Đăng nhập'),
         ),
       ],
     );

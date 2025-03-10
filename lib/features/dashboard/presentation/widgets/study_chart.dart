@@ -1,5 +1,3 @@
-// lib/features/dashboard/presentation/widgets/study_chart.dart
-
 import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/cards/qlz_card.dart';
@@ -35,43 +33,54 @@ class StudyActivityChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return QlzCard(
-      padding: const EdgeInsets.all(20),
+      backgroundColor: AppColors.darkCard,
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const QlzLabel('HOẠT ĐỘNG'),
-              _buildPeriodDropdown(),
+              QlzLabel(
+                'HOẠT ĐỘNG',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppColors.darkText,
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              _buildPeriodDropdown(context),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           SizedBox(
             height: 200,
-            child: _buildChart(),
+            child: _buildChart(context),
           ),
           const SizedBox(height: 16),
-          _buildLegend(),
+          _buildLegend(context),
         ],
       ),
     );
   }
 
-  Widget _buildPeriodDropdown() {
+  Widget _buildPeriodDropdown(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.darkCard,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        color: AppColors.darkSurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.darkBorder),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<int>(
           value: timePeriod,
-          icon: const Icon(Icons.arrow_drop_down, color: Colors.white70),
-          dropdownColor: const Color(0xFF1A1D3D),
-          style: const TextStyle(color: Colors.white),
+          icon: const Icon(Icons.arrow_drop_down,
+              color: AppColors.darkTextSecondary),
+          dropdownColor: AppColors.darkCard,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.darkText,
+              ),
           onChanged: (int? newValue) {
             if (newValue != null) {
               onPeriodChanged(newValue);
@@ -106,38 +115,29 @@ class StudyActivityChart extends StatelessWidget {
     );
   }
 
-  Widget _buildChart() {
-    // Sort dates in ascending order
+  Widget _buildChart(BuildContext context) {
     final sortedDates = dailyStudyTime.keys.toList()..sort();
-
-    // Take the most recent dates based on time period
     final displayDates = sortedDates.length > timePeriod
         ? sortedDates.sublist(sortedDates.length - timePeriod)
         : sortedDates;
 
-    // Find max values to normalize the chart
     int maxStudyTime = 0;
     int maxTermsLearned = 0;
 
     for (final date in displayDates) {
       final studyTime = dailyStudyTime[date] ?? 0;
       final termsLearned = dailyTermsLearned[date] ?? 0;
-
-      if (studyTime > maxStudyTime) maxStudyTime = studyTime;
-      if (termsLearned > maxTermsLearned) maxTermsLearned = termsLearned;
+      maxStudyTime = studyTime > maxStudyTime ? studyTime : maxStudyTime;
+      maxTermsLearned =
+          termsLearned > maxTermsLearned ? termsLearned : maxTermsLearned;
     }
 
-    // Ensure we have non-zero max values
-    maxStudyTime = maxStudyTime > 0 ? maxStudyTime : 3600; // Default to 1 hour
-    maxTermsLearned =
-        maxTermsLearned > 0 ? maxTermsLearned : 20; // Default to 20 terms
+    maxStudyTime = maxStudyTime > 0 ? maxStudyTime : 3600;
+    maxTermsLearned = maxTermsLearned > 0 ? maxTermsLearned : 20;
 
     return Row(
       children: [
-        // Left axis (study time)
-        _buildLeftAxis(maxStudyTime),
-
-        // Chart area
+        _buildLeftAxis(context, maxStudyTime),
         Expanded(
           child: Column(
             children: [
@@ -148,7 +148,6 @@ class StudyActivityChart extends StatelessWidget {
                     final studyTimeValue = dailyStudyTime[date] ?? 0;
                     final termsLearnedValue = dailyTermsLearned[date] ?? 0;
 
-                    // Normalize values between 0 and 1
                     final studyTimeHeight =
                         maxStudyTime > 0 ? studyTimeValue / maxStudyTime : 0.0;
                     final termsLearnedHeight = maxTermsLearned > 0
@@ -159,6 +158,7 @@ class StudyActivityChart extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 2),
                         child: _buildBarGroup(
+                          context,
                           studyTimeHeight,
                           termsLearnedHeight,
                           studyTimeValue,
@@ -170,14 +170,10 @@ class StudyActivityChart extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-
-              // Bottom axis (dates)
               SizedBox(
                 height: 20,
                 child: Row(
                   children: displayDates.map((date) {
-                    // Create a short date label (e.g., "24/03")
-                    // Convert from "YYYY-MM-DD" to "DD/MM"
                     final parts = date.split('-');
                     final label =
                         parts.length >= 3 ? '${parts[2]}/${parts[1]}' : date;
@@ -186,10 +182,10 @@ class StudyActivityChart extends StatelessWidget {
                       child: Center(
                         child: Text(
                           label,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.white.withOpacity(0.5),
-                          ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.darkTextSecondary,
+                                  ),
                         ),
                       ),
                     );
@@ -199,27 +195,17 @@ class StudyActivityChart extends StatelessWidget {
             ],
           ),
         ),
-
-        // Right axis (terms learned)
-        _buildRightAxis(maxTermsLearned),
+        _buildRightAxis(context, maxTermsLearned),
       ],
     );
   }
 
-  Widget _buildLeftAxis(int maxValue) {
-    // Create 5 evenly spaced labels for the left axis
+  Widget _buildLeftAxis(BuildContext context, int maxValue) {
     final labels = List.generate(5, (index) {
       final value = (maxValue * index / 4).round();
-
-      // Convert seconds to minutes/hours
-      String label;
-      if (value >= 3600) {
-        label = '${(value / 3600).toStringAsFixed(1)}h';
-      } else {
-        label = '${(value / 60).round()}m';
-      }
-
-      return label;
+      return value >= 3600
+          ? '${(value / 3600).toStringAsFixed(1)}h'
+          : '${(value / 60).round()}m';
     });
 
     return SizedBox(
@@ -230,18 +216,16 @@ class StudyActivityChart extends StatelessWidget {
         children: labels.reversed.map((label) {
           return Text(
             label,
-            style: TextStyle(
-              fontSize: 10,
-              color: Colors.white.withOpacity(0.5),
-            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.darkTextSecondary,
+                ),
           );
         }).toList(),
       ),
     );
   }
 
-  Widget _buildRightAxis(int maxValue) {
-    // Create 5 evenly spaced labels for the right axis
+  Widget _buildRightAxis(BuildContext context, int maxValue) {
     final labels = List.generate(5, (index) {
       return ((maxValue * index / 4).round()).toString();
     });
@@ -254,10 +238,9 @@ class StudyActivityChart extends StatelessWidget {
         children: labels.reversed.map((label) {
           return Text(
             label,
-            style: TextStyle(
-              fontSize: 10,
-              color: Colors.white.withOpacity(0.5),
-            ),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.darkTextSecondary,
+                ),
           );
         }).toList(),
       ),
@@ -265,6 +248,7 @@ class StudyActivityChart extends StatelessWidget {
   }
 
   Widget _buildBarGroup(
+    BuildContext context,
     double studyTimeHeight,
     double termsLearnedHeight,
     int studyTimeValue,
@@ -273,20 +257,25 @@ class StudyActivityChart extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        // Study time bar
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
               final height = constraints.maxHeight * studyTimeHeight;
-
               return Tooltip(
                 message: _formatTime(studyTimeValue),
+                textStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.darkText,
+                    ),
+                decoration: BoxDecoration(
+                  color: AppColors.darkSurface,
+                  borderRadius: BorderRadius.circular(4),
+                ),
                 child: Container(
                   height: height > 2 ? height : (studyTimeValue > 0 ? 2 : 0),
                   decoration: const BoxDecoration(
                     color: AppColors.primary,
                     borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(3),
+                      top: Radius.circular(4),
                     ),
                   ),
                 ),
@@ -294,23 +283,26 @@ class StudyActivityChart extends StatelessWidget {
             },
           ),
         ),
-
         const SizedBox(width: 1),
-
-        // Terms learned bar
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
               final height = constraints.maxHeight * termsLearnedHeight;
-
               return Tooltip(
                 message: '$termsLearnedValue từ',
+                textStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.darkText,
+                    ),
+                decoration: BoxDecoration(
+                  color: AppColors.darkSurface,
+                  borderRadius: BorderRadius.circular(4),
+                ),
                 child: Container(
                   height: height > 2 ? height : (termsLearnedValue > 0 ? 2 : 0),
                   decoration: const BoxDecoration(
                     color: AppColors.success,
                     borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(3),
+                      top: Radius.circular(4),
                     ),
                   ),
                 ),
@@ -322,18 +314,18 @@ class StudyActivityChart extends StatelessWidget {
     );
   }
 
-  Widget _buildLegend() {
+  Widget _buildLegend(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildLegendItem(AppColors.primary, 'Thời gian học'),
+        _buildLegendItem(context, AppColors.primary, 'Thời gian học'),
         const SizedBox(width: 24),
-        _buildLegendItem(AppColors.success, 'Số từ đã học'),
+        _buildLegendItem(context, AppColors.success, 'Số từ đã học'),
       ],
     );
   }
 
-  Widget _buildLegendItem(Color color, String label) {
+  Widget _buildLegendItem(BuildContext context, Color color, String label) {
     return Row(
       children: [
         Container(
@@ -347,10 +339,9 @@ class StudyActivityChart extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.white.withOpacity(0.7),
-          ),
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.darkTextSecondary,
+              ),
         ),
       ],
     );

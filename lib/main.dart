@@ -1,14 +1,12 @@
 import 'dart:ui';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/config/app_theme.dart';
+import 'package:qlz_flash_cards_ui/core/managers/cubit_manager.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
-import 'package:qlz_flash_cards_ui/features/module/data/repositories/module_repository.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,19 +27,10 @@ void main() async {
     ),
   );
 
-  // Initialize repositories
-  final sharedPrefs = await SharedPreferences.getInstance();
-  final moduleRepository = ModuleRepository(Dio(), sharedPrefs);
+  // Initialize CubitManager
+  await CubitManager().initialize();
 
-  runApp(
-    MultiRepositoryProvider(
-      providers: [
-        RepositoryProvider<ModuleRepository>.value(value: moduleRepository),
-        // Add other repositories here as needed
-      ],
-      child: const QlzFlashCardsApp(),
-    ),
-  );
+  runApp(const QlzFlashCardsApp());
 }
 
 final class QlzFlashCardsApp extends StatelessWidget {
@@ -49,20 +38,23 @@ final class QlzFlashCardsApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Quizlet Flash Cards',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.dark, // Force dark theme vì design là dark mode
-      initialRoute: AppRoutes.welcome,
-      onGenerateRoute: AppRoutes.onGenerateRoute,
-      builder: (context, child) {
-        return ScrollConfiguration(
-          behavior: WebScrollBehavior(),
-          child: child!,
-        );
-      },
+    return MultiBlocProvider(
+      providers: CubitManager().globalProviders,
+      child: MaterialApp(
+        title: 'Quizlet Flash Cards',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.dark, // Force dark theme vì design là dark mode
+        initialRoute: AppRoutes.welcome,
+        onGenerateRoute: AppRoutes.onGenerateRoute,
+        builder: (context, child) {
+          return ScrollConfiguration(
+            behavior: WebScrollBehavior(),
+            child: child!,
+          );
+        },
+      ),
     );
   }
 }
