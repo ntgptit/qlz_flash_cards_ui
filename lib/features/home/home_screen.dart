@@ -1,9 +1,12 @@
+// lib/features/home/home_screen.dart
+
 import 'package:flutter/material.dart';
-import 'package:qlz_flash_cards_ui/features/home/tabs/home_tab.dart';
-import 'package:qlz_flash_cards_ui/features/home/tabs/solutions_tab.dart';
+import 'package:qlz_flash_cards_ui/features/dashboard/dashboard_module.dart';
 import 'package:qlz_flash_cards_ui/features/library/presentation/screens/library_screen.dart';
 import 'package:qlz_flash_cards_ui/features/profile/profile_screen.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/labels/qlz_label.dart';
 
+/// Main home screen with bottom navigation
 final class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -13,14 +16,20 @@ final class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  late final List<Widget> _screens;
 
-  final List<Widget> _screens = [
-    const HomeTab(),
-    const SolutionsTab(),
-    const Center(child: Icon(Icons.add, size: 40, color: Colors.white)),
-    const LibraryScreen(),
-    const ProfileScreen(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Initialize screens with the dashboard
+    _screens = [
+      DashboardModule.create(), // Dashboard as home screen
+      const SolutionsTab(),
+      const Center(child: Icon(Icons.add, size: 40, color: Colors.white)),
+      const LibraryScreen(),
+      const ProfileScreen(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,6 +98,10 @@ class _HomeScreenState extends State<HomeScreen> {
               title: 'Học phần',
               subtitle: 'Tạo bộ thẻ ghi nhớ mới',
               color: Colors.blue,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/create-study-module');
+              },
             ),
             const SizedBox(height: 12),
             _buildCreateOption(
@@ -97,6 +110,10 @@ class _HomeScreenState extends State<HomeScreen> {
               title: 'Thư mục',
               subtitle: 'Tổ chức học phần của bạn',
               color: Colors.orange,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/create-folder');
+              },
             ),
             const SizedBox(height: 12),
             _buildCreateOption(
@@ -105,6 +122,10 @@ class _HomeScreenState extends State<HomeScreen> {
               title: 'Lớp học',
               subtitle: 'Tạo không gian học tập chung',
               color: Colors.purple,
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/create-class');
+              },
             ),
           ],
         ),
@@ -118,9 +139,11 @@ class _HomeScreenState extends State<HomeScreen> {
     required String title,
     required String subtitle,
     required Color color,
+    VoidCallback? onTap,
   }) {
     return InkWell(
-      onTap: () => Navigator.pop(context),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -146,7 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     subtitle,
                     style: const TextStyle(
-                      color: Color.fromARGB(180, 255, 255, 255), // Updated
+                      color: Color.fromARGB(180, 255, 255, 255),
                       fontSize: 14,
                     ),
                   ),
@@ -155,11 +178,52 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const Icon(
               Icons.arrow_forward_ios,
-              color: Color.fromARGB(180, 255, 255, 255), // Updated
+              color: Color.fromARGB(180, 255, 255, 255),
               size: 16,
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Solutions tab with placeholder for future feature
+class SolutionsTab extends StatelessWidget {
+  const SolutionsTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.lightbulb_outline,
+            color: Colors.amber,
+            size: 48,
+          ),
+          const SizedBox(height: 16),
+          const QlzLabel(
+            'Lời giải',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              'Đang phát triển tính năng giúp bạn giải đáp các bài tập',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.7),
+                fontSize: 16,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
       ),
     );
   }
