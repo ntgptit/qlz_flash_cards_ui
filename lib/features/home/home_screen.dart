@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/features/dashboard/dashboard_module.dart';
-import 'package:qlz_flash_cards_ui/features/library/presentation/screens/library_screen.dart';
+import 'package:qlz_flash_cards_ui/features/library/library_module.dart';
 import 'package:qlz_flash_cards_ui/features/profile/profile_screen.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/labels/qlz_label.dart';
 
@@ -24,7 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
       DashboardModule.create(),
       const SolutionsTab(),
       const Center(child: Icon(Icons.add, size: 40, color: AppColors.darkText)),
-      const LibraryScreen(),
+      LibraryModule.provideLibraryScreen(),
       const ProfileScreen(),
     ];
   }
