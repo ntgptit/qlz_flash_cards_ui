@@ -5,6 +5,7 @@ import 'package:qlz_flash_cards_ui/shared/widgets/cards/qlz_card.dart';
 
 import '../../data/models/class_model.dart';
 
+/// Widget hiển thị một item lớp học
 class ClassItem extends StatelessWidget {
   final ClassModel classModel;
   final VoidCallback? onTap;
@@ -47,12 +48,22 @@ class ClassItem extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            '${classModel.studyModulesCount} học phần', // "X study modules" in Vietnamese
+            '${classModel.studyModulesCount} học phần',
             style: TextStyle(
               color: Colors.white.withOpacity(0.6),
               fontSize: 16,
             ),
           ),
+          if (classModel.creatorName != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Tạo bởi: ${classModel.creatorName}',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.6),
+                fontSize: 14,
+              ),
+            ),
+          ],
         ],
       ),
     );

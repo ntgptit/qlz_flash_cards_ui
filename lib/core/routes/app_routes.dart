@@ -16,6 +16,7 @@ class AppRoutes {
   static const String home = '/home';
   static const String library = '/library';
   static const String folderDetail = '/folder-detail';
+  static const String classDetail = '/class-detail';
   static const String listStudyModuleOfFolder = '/list-study-module-of-folder';
   static const String moduleDetail = '/module-detail';
   static const String studyFlashcards = '/study-flashcards';
@@ -176,6 +177,24 @@ class AppRoutes {
         params: {
           'folderName': folderName,
           'folderId': folderId,
+        },
+      ).toMap(),
+    );
+  }
+
+  static Future<dynamic> navigateToClassDetail(
+    BuildContext context, {
+    required String classId,
+    required String className,
+  }) {
+    return Navigator.pushNamed(
+      context,
+      classDetail,
+      arguments: RouteParams(
+        routeName: classDetail,
+        params: {
+          'classId': classId,
+          'className': className,
         },
       ).toMap(),
     );

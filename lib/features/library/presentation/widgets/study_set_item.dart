@@ -7,6 +7,7 @@ import 'package:qlz_flash_cards_ui/shared/widgets/utils/qlz_chip.dart';
 
 import '../../data/models/study_set_model.dart';
 
+/// Widget hiển thị một item học phần
 class StudySetItem extends StatelessWidget {
   final StudySet studySet;
   final VoidCallback? onTap;
@@ -37,7 +38,7 @@ class StudySetItem extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '${studySet.wordCount} 단어', // "X terms" in Korean
+            '${studySet.wordCount} từ vựng',
             style: TextStyle(
               color: Colors.white.withOpacity(0.6),
               fontSize: 14,

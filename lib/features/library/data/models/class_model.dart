@@ -1,11 +1,21 @@
 // lib/features/library/data/models/class_model.dart
 import 'package:equatable/equatable.dart';
 
+/// Model đại diện cho một lớp học
 class ClassModel extends Equatable {
+  /// ID duy nhất của lớp học
   final String id;
+
+  /// Tên lớp học
   final String name;
+
+  /// Số lượng học phần trong lớp học
   final int studyModulesCount;
+
+  /// Tên người tạo lớp học (nếu có)
   final String? creatorName;
+
+  /// Ngày tạo lớp học
   final DateTime createdAt;
 
   const ClassModel({
@@ -17,8 +27,10 @@ class ClassModel extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, name, studyModulesCount, creatorName, createdAt];
+  List<Object?> get props =>
+      [id, name, studyModulesCount, creatorName, createdAt];
 
+  /// Tạo bản sao của ClassModel với các thuộc tính được thay đổi
   ClassModel copyWith({
     String? id,
     String? name,
@@ -35,6 +47,7 @@ class ClassModel extends Equatable {
     );
   }
 
+  /// Tạo ClassModel từ JSON
   factory ClassModel.fromJson(Map<String, dynamic> json) {
     return ClassModel(
       id: json['id'] as String,
@@ -45,6 +58,7 @@ class ClassModel extends Equatable {
     );
   }
 
+  /// Chuyển đổi ClassModel thành JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,

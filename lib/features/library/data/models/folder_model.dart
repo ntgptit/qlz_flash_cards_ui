@@ -1,12 +1,24 @@
 // lib/features/library/data/models/folder_model.dart
 import 'package:equatable/equatable.dart';
 
+/// Model đại diện cho một thư mục
 class Folder extends Equatable {
+  /// ID duy nhất của thư mục
   final String id;
+
+  /// Tên thư mục
   final String name;
+
+  /// Tên người tạo thư mục
   final String creatorName;
+
+  /// Người tạo có huy hiệu Plus hay không
   final bool hasPlusBadge;
+
+  /// Số lượng học phần trong thư mục
   final int moduleCount;
+
+  /// Ngày tạo thư mục
   final DateTime createdAt;
 
   const Folder({
@@ -19,8 +31,10 @@ class Folder extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, name, creatorName, hasPlusBadge, moduleCount, createdAt];
+  List<Object?> get props =>
+      [id, name, creatorName, hasPlusBadge, moduleCount, createdAt];
 
+  /// Tạo bản sao của Folder với các thuộc tính được thay đổi
   Folder copyWith({
     String? id,
     String? name,
@@ -39,6 +53,7 @@ class Folder extends Equatable {
     );
   }
 
+  /// Tạo Folder từ JSON
   factory Folder.fromJson(Map<String, dynamic> json) {
     return Folder(
       id: json['id'] as String,
@@ -50,6 +65,7 @@ class Folder extends Equatable {
     );
   }
 
+  /// Chuyển đổi Folder thành JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,

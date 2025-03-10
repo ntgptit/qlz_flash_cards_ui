@@ -3,11 +3,18 @@ import 'package:equatable/equatable.dart';
 
 import '../../data/models/class_model.dart';
 
+/// Trạng thái có thể của classes
 enum ClassesStatus { initial, loading, success, failure }
 
+/// Lớp state quản lý trạng thái của classes
 class ClassesState extends Equatable {
+  /// Danh sách các lớp học
   final List<ClassModel> classes;
+
+  /// Trạng thái hiện tại
   final ClassesStatus status;
+
+  /// Thông báo lỗi (nếu có)
   final String? errorMessage;
 
   const ClassesState({
@@ -19,6 +26,7 @@ class ClassesState extends Equatable {
   @override
   List<Object?> get props => [classes, status, errorMessage];
 
+  /// Tạo bản sao của state với các thuộc tính được thay đổi
   ClassesState copyWith({
     List<ClassModel>? classes,
     ClassesStatus? status,
@@ -27,7 +35,7 @@ class ClassesState extends Equatable {
     return ClassesState(
       classes: classes ?? this.classes,
       status: status ?? this.status,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage: errorMessage,
     );
   }
 }

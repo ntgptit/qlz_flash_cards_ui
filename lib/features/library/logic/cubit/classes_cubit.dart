@@ -1,15 +1,16 @@
-// lib/features/library/logic/cubit/classes_cubit.dart
+// lib/features/library/logic/cubits/classes_cubit.dart
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../data/repositories/library_repository.dart';
 import '../states/classes_state.dart';
 
+/// Cubit quản lý business logic cho classes
 class ClassesCubit extends Cubit<ClassesState> {
   final LibraryRepository _repository;
 
   ClassesCubit(this._repository) : super(const ClassesState());
 
-  // Load classes
+  /// Tải danh sách lớp học
   Future<void> loadClasses({bool forceRefresh = false}) async {
     emit(state.copyWith(status: ClassesStatus.loading));
 
@@ -27,7 +28,7 @@ class ClassesCubit extends Cubit<ClassesState> {
     }
   }
 
-  // Refresh classes
+  /// Làm mới danh sách lớp học
   Future<void> refreshClasses() async {
     await loadClasses(forceRefresh: true);
   }

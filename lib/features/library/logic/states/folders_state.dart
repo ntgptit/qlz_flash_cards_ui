@@ -3,11 +3,18 @@ import 'package:equatable/equatable.dart';
 
 import '../../data/models/folder_model.dart';
 
+/// Trạng thái có thể của folders
 enum FoldersStatus { initial, loading, success, failure }
 
+/// Lớp state quản lý trạng thái của folders
 class FoldersState extends Equatable {
+  /// Danh sách các thư mục
   final List<Folder> folders;
+
+  /// Trạng thái hiện tại
   final FoldersStatus status;
+
+  /// Thông báo lỗi (nếu có)
   final String? errorMessage;
 
   const FoldersState({
@@ -19,6 +26,7 @@ class FoldersState extends Equatable {
   @override
   List<Object?> get props => [folders, status, errorMessage];
 
+  /// Tạo bản sao của state với các thuộc tính được thay đổi
   FoldersState copyWith({
     List<Folder>? folders,
     FoldersStatus? status,
@@ -27,7 +35,7 @@ class FoldersState extends Equatable {
     return FoldersState(
       folders: folders ?? this.folders,
       status: status ?? this.status,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage: errorMessage,
     );
   }
 }

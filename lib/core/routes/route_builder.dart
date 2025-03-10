@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/flashcard_module.dart';
-import 'package:qlz_flash_cards_ui/features/library/presentation/screens/library_screen.dart';
+import 'package:qlz_flash_cards_ui/features/library/library_module.dart';
 import 'package:qlz_flash_cards_ui/features/module/module_module.dart';
 
 import '../../features/auth/screens/forgot_password_screen.dart';
@@ -27,10 +27,14 @@ class RouteBuilder {
     AppRoutes.register: (_) => const RegisterScreen(),
     AppRoutes.forgotPassword: (_) => const ForgotPasswordScreen(),
     AppRoutes.home: (_) => const HomeScreen(),
-    AppRoutes.library: (_) => const LibraryScreen(),
+    AppRoutes.library: (_) => LibraryModule.provideLibraryScreen(),
     AppRoutes.folderDetail: (params) => ModuleModule.provideListScreen(
           folderName: params.getString('folderName', 'Unknown'),
           folderId: params.getString('folderId'),
+        ),
+    AppRoutes.classDetail: (params) => LibraryModule.provideClassDetailScreen(
+          classId: params.getString('classId'),
+          className: params.getString('className', 'Unknown'),
         ),
     AppRoutes.listStudyModuleOfFolder: (params) =>
         ModuleModule.provideListScreen(

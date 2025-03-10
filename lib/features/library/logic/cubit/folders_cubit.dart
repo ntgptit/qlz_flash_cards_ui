@@ -1,15 +1,16 @@
-// lib/features/library/logic/cubit/folders_cubit.dart
+// lib/features/library/logic/cubits/folders_cubit.dart
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../data/repositories/library_repository.dart';
 import '../states/folders_state.dart';
 
+/// Cubit quản lý business logic cho folders
 class FoldersCubit extends Cubit<FoldersState> {
   final LibraryRepository _repository;
 
   FoldersCubit(this._repository) : super(const FoldersState());
 
-  // Load folders
+  /// Tải danh sách thư mục
   Future<void> loadFolders({bool forceRefresh = false}) async {
     emit(state.copyWith(status: FoldersStatus.loading));
 
@@ -27,7 +28,7 @@ class FoldersCubit extends Cubit<FoldersState> {
     }
   }
 
-  // Refresh folders
+  /// Làm mới danh sách thư mục
   Future<void> refreshFolders() async {
     await loadFolders(forceRefresh: true);
   }

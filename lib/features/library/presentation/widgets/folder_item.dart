@@ -7,6 +7,7 @@ import 'package:qlz_flash_cards_ui/shared/widgets/utils/qlz_chip.dart';
 
 import '../../data/models/folder_model.dart';
 
+/// Widget hiển thị một item thư mục
 class FolderItem extends StatelessWidget {
   final Folder folder;
   final VoidCallback? onTap;
