@@ -38,23 +38,32 @@ final class QlzFlashCardsApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final providers = CubitManager().globalProviders;
+
+    final app = MaterialApp(
+      title: 'Quizlet Flash Cards',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.dark, // Force dark theme vì design là dark mode
+      initialRoute: AppRoutes.welcome,
+      onGenerateRoute: AppRoutes.onGenerateRoute,
+      builder: (context, child) {
+        return ScrollConfiguration(
+          behavior: WebScrollBehavior(),
+          child: child!,
+        );
+      },
+    );
+
+    // Chỉ sử dụng MultiBlocProvider khi có providers
+    if (providers.isEmpty) {
+      return app;
+    }
+
     return MultiBlocProvider(
-      providers: CubitManager().globalProviders,
-      child: MaterialApp(
-        title: 'Quizlet Flash Cards',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.dark, // Force dark theme vì design là dark mode
-        initialRoute: AppRoutes.welcome,
-        onGenerateRoute: AppRoutes.onGenerateRoute,
-        builder: (context, child) {
-          return ScrollConfiguration(
-            behavior: WebScrollBehavior(),
-            child: child!,
-          );
-        },
-      ),
+      providers: providers,
+      child: app,
     );
   }
 }
