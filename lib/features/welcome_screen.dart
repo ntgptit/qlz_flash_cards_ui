@@ -8,53 +8,70 @@ final class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Sử dụng MediaQuery để responsive
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.height < 600;
+
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.darkBorder,
-                    width: 2,
-                  ),
-                  image: const DecorationImage(
-                    image: AssetImage('assets/images/auth_avatar.jpg'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-              Text(
-                'Cách tốt nhất để học. Đăng ký miễn phí.',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: AppColors.darkText,
-                      fontWeight: FontWeight.bold,
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight:
+                  screenSize.height - MediaQuery.of(context).padding.vertical,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Avatar container with semantics for accessibility
+                  Semantics(
+                    label: 'Profile image',
+                    image: true,
+                    child: Container(
+                      width: isSmallScreen ? 100 : 120,
+                      height: isSmallScreen ? 100 : 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.darkBorder,
+                          width: 2,
+                        ),
+                        image: const DecorationImage(
+                          image: AssetImage('assets/images/auth_avatar.jpg'),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                     ),
-                textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: isSmallScreen ? 24 : 32),
+                  Text(
+                    'Cách tốt nhất để học. Đăng ký miễn phí.',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: AppColors.darkText,
+                          fontWeight: FontWeight.bold,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Bằng việc đăng ký, bạn chấp nhận Điều khoản dịch vụ và Chính sách quyền riêng tư của Quizlet',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.darkTextSecondary,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: isSmallScreen ? 32 : 40),
+                  _buildGoogleButton(context),
+                  const SizedBox(height: 16),
+                  _buildEmailButton(context),
+                  const SizedBox(height: 32),
+                  _buildSignInLink(context),
+                ],
               ),
-              const SizedBox(height: 12),
-              Text(
-                'Bằng việc đăng ký, bạn chấp nhận Điều khoản dịch vụ và Chính sách quyền riêng tư của Quizlet',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.darkTextSecondary,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 40),
-              _buildGoogleButton(context),
-              const SizedBox(height: 16),
-              _buildEmailButton(context),
-              const SizedBox(height: 32),
-              _buildSignInLink(context),
-            ],
+            ),
           ),
         ),
       ),
