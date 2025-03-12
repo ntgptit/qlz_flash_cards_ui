@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/core/managers/cubit_manager.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
 import 'package:qlz_flash_cards_ui/features/dashboard/dashboard_module.dart';
 import 'package:qlz_flash_cards_ui/features/home/data/models/home_menu_item.dart';
-import 'package:qlz_flash_cards_ui/features/home/logic/cubit/home_cubit.dart'
-    show HomeCubit;
+import 'package:qlz_flash_cards_ui/features/home/logic/cubit/home_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/home/logic/states/home_state.dart';
 import 'package:qlz_flash_cards_ui/features/library/library_module.dart';
 import 'package:qlz_flash_cards_ui/features/profile/profile_screen.dart';
@@ -18,11 +18,17 @@ final class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Wrap with BlocProvider from CubitManager's global providers
-    // This ensures the HomeCubit is accessible throughout the home screen
-    return MultiBlocProvider(
-      providers: CubitManager().getHomeProviders(),
-      child: const _HomeScreenContent(),
+    // Sử dụng Consumer của Riverpod để lấy HomeCubit
+    return Consumer(
+      builder: (context, ref, _) {
+        final homeCubit = ref.watch(homeCubitProvider);
+
+        // Cung cấp HomeCubit qua BlocProvider để các widget con có thể truy cập
+        return BlocProvider.value(
+          value: homeCubit,
+          child: const _HomeScreenContent(),
+        );
+      },
     );
   }
 }
@@ -37,7 +43,7 @@ class _HomeScreenContent extends StatelessWidget {
       builder: (context, state) {
         return Scaffold(
           backgroundColor: AppColors.darkBackground,
-          body: _buildBody(state.selectedTabIndex),
+          body: _buildBody(context, state.selectedTabIndex),
           bottomNavigationBar:
               _buildNavigationBar(context, state.selectedTabIndex),
         );
@@ -45,16 +51,21 @@ class _HomeScreenContent extends StatelessWidget {
     );
   }
 
-  Widget _buildBody(int tabIndex) {
-    // Return appropriate screen based on the selected tab
-    return switch (tabIndex) {
-      0 => DashboardModule.create(),
-      1 => const SolutionsTab(),
-      2 => const SizedBox.shrink(), // This tab opens a modal instead
-      3 => LibraryModule.provideLibraryScreen(),
-      4 => const ProfileScreen(),
-      _ => DashboardModule.create() // Fallback case
-    };
+  Widget _buildBody(BuildContext context, int tabIndex) {
+    // Lấy WidgetRef từ Consumer bên ngoài khi cần
+    return Consumer(
+      builder: (context, ref, _) {
+        // Return appropriate screen based on the selected tab
+        return switch (tabIndex) {
+          0 => DashboardModule.create(),
+          1 => const SolutionsTab(),
+          2 => const SizedBox.shrink(), // This tab opens a modal instead
+          3 => LibraryModule.provideRiverpodScreen(),
+          4 => const ProfileScreen(),
+          _ => DashboardModule.create() // Fallback case
+        };
+      },
+    );
   }
 
   Widget _buildNavigationBar(BuildContext context, int currentIndex) {

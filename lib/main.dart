@@ -2,11 +2,12 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/config/app_theme.dart';
 import 'package:qlz_flash_cards_ui/core/managers/cubit_manager.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,10 +28,19 @@ void main() async {
     ),
   );
 
-  // Initialize CubitManager
-  await CubitManager().initialize();
+  // Khởi tạo SharedPreferences để sử dụng với Riverpod
+  final prefs = await SharedPreferences.getInstance();
 
-  runApp(const QlzFlashCardsApp());
+  runApp(
+    // Bọc toàn bộ ứng dụng trong ProviderScope của Riverpod
+    ProviderScope(
+      // Override SharedPreferences provider với instance thực
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+      child: const QlzFlashCardsApp(),
+    ),
+  );
 }
 
 final class QlzFlashCardsApp extends StatelessWidget {
@@ -38,8 +48,7 @@ final class QlzFlashCardsApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final providers = CubitManager().globalProviders;
-
+    // Không cần sử dụng CubitManager().globalProviders nữa
     final app = MaterialApp(
       title: 'Quizlet Flash Cards',
       debugShowCheckedModeBanner: false,
@@ -56,15 +65,8 @@ final class QlzFlashCardsApp extends StatelessWidget {
       },
     );
 
-    // Chỉ sử dụng MultiBlocProvider khi có providers
-    if (providers.isEmpty) {
-      return app;
-    }
-
-    return MultiBlocProvider(
-      providers: providers,
-      child: app,
-    );
+    // Trả về app trực tiếp vì các providers đã được cung cấp bởi ProviderScope
+    return app;
   }
 }
 

@@ -1,6 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Repository imports
 import 'package:qlz_flash_cards_ui/features/auth/data/repositories/auth_repository.dart';
@@ -21,16 +19,43 @@ import 'package:qlz_flash_cards_ui/features/module/logic/cubit/study_module_cubi
 import 'package:shared_preferences/shared_preferences.dart';
 
 //-------------------------------------------------------------------------
-// GLOBAL PROVIDERS
+// CORE DEPENDENCY PROVIDERS
 //-------------------------------------------------------------------------
 
 /// Provider for Dio HTTP client
-final dioProvider = Provider<Dio>((ref) => Dio());
+final dioProvider = Provider<Dio>((ref) {
+  final dio = Dio();
+
+  // Cấu hình cơ bản cho Dio
+  dio.options.connectTimeout = const Duration(seconds: 30);
+  dio.options.receiveTimeout = const Duration(seconds: 30);
+
+  // Thêm interceptors nếu cần
+  if (kDebugMode) {
+    dio.interceptors.add(LogInterceptor(
+      requestBody: true,
+      responseBody: true,
+    ));
+  }
+
+  return dio;
+});
 
 /// Provider for SharedPreferences
+/// Lưu ý: Provider này cần được override trong main.dart
 final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
-  throw UnimplementedError(
-      'You need to override this provider with the actual instance');
+  throw UnimplementedError('SharedPreferences provider chưa được khởi tạo. '
+      'Hãy override provider này trong main.dart với giá trị thực.');
+});
+
+//-------------------------------------------------------------------------
+// REPOSITORY PROVIDERS
+//-------------------------------------------------------------------------
+
+/// Provider for AuthRepository
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  final dio = ref.watch(dioProvider);
+  return AuthRepository(dio);
 });
 
 /// Provider for LibraryRepository
@@ -54,36 +79,62 @@ final flashcardRepositoryProvider = Provider<FlashcardRepository>((ref) {
   return FlashcardRepository(dio, prefs);
 });
 
-/// Provider for AuthRepository
-final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  final dio = ref.watch(dioProvider);
-  return AuthRepository(dio);
-});
-
 //-------------------------------------------------------------------------
-// CUBIT PROVIDERS
+// GLOBAL CUBIT PROVIDERS
 //-------------------------------------------------------------------------
 
 /// Global HomeCubit provider
-final homeCubitProvider = Provider.autoDispose<HomeCubit>((ref) {
+final homeCubitProvider = Provider<HomeCubit>((ref) {
   return HomeCubit();
 });
+
+//-------------------------------------------------------------------------
+// AUTH CUBIT PROVIDERS
+//-------------------------------------------------------------------------
 
 /// AuthCubit provider
 final authCubitProvider = Provider.autoDispose<AuthCubit>((ref) {
   final repository = ref.watch(authRepositoryProvider);
-  return AuthCubit(repository);
+  final cubit = AuthCubit(repository);
+
+  // Dispose khi không còn cần thiết
+  ref.onDispose(() {
+    cubit.close();
+  });
+
+  return cubit;
 });
+
+//-------------------------------------------------------------------------
+// LIBRARY CUBIT PROVIDERS
+//-------------------------------------------------------------------------
 
 /// StudySetsCubit provider that loads data automatically
 final studySetsCubitProvider = Provider.autoDispose<StudySetsCubit>((ref) {
   final repository = ref.watch(libraryRepositoryProvider);
   final cubit = StudySetsCubit(repository);
 
-  // Automatically load data when the cubit is created
+  // Tự động tải dữ liệu khi cubit được tạo
   cubit.loadStudySets();
 
-  // Dispose when no longer needed
+  // Dispose khi không còn cần thiết
+  ref.onDispose(() {
+    cubit.close();
+  });
+
+  return cubit;
+});
+
+/// StudySetsCubit provider for a specific folder
+final folderStudySetsCubitProvider =
+    Provider.family.autoDispose<StudySetsCubit, String>((ref, folderId) {
+  final repository = ref.watch(libraryRepositoryProvider);
+  final cubit = StudySetsCubit(repository);
+
+  // Tải dữ liệu cho folder cụ thể
+  cubit.loadStudySetsByFolder(folderId);
+
+  // Dispose khi không còn cần thiết
   ref.onDispose(() {
     cubit.close();
   });
@@ -96,10 +147,10 @@ final foldersCubitProvider = Provider.autoDispose<FoldersCubit>((ref) {
   final repository = ref.watch(libraryRepositoryProvider);
   final cubit = FoldersCubit(repository);
 
-  // Automatically load data when the cubit is created
+  // Tự động tải dữ liệu khi cubit được tạo
   cubit.loadFolders();
 
-  // Dispose when no longer needed
+  // Dispose khi không còn cần thiết
   ref.onDispose(() {
     cubit.close();
   });
@@ -112,10 +163,10 @@ final classesCubitProvider = Provider.autoDispose<ClassesCubit>((ref) {
   final repository = ref.watch(libraryRepositoryProvider);
   final cubit = ClassesCubit(repository);
 
-  // Automatically load data when the cubit is created
+  // Tự động tải dữ liệu khi cubit được tạo
   cubit.loadClasses();
 
-  // Dispose when no longer needed
+  // Dispose khi không còn cần thiết
   ref.onDispose(() {
     cubit.close();
   });
@@ -123,12 +174,16 @@ final classesCubitProvider = Provider.autoDispose<ClassesCubit>((ref) {
   return cubit;
 });
 
+//-------------------------------------------------------------------------
+// MODULE CUBIT PROVIDERS
+//-------------------------------------------------------------------------
+
 /// StudyModuleCubit provider
 final studyModuleCubitProvider = Provider.autoDispose<StudyModuleCubit>((ref) {
   final repository = ref.watch(moduleRepositoryProvider);
   final cubit = StudyModuleCubit(repository);
 
-  // Dispose when no longer needed
+  // Dispose khi không còn cần thiết
   ref.onDispose(() {
     cubit.close();
   });
@@ -142,30 +197,13 @@ final createModuleCubitProvider =
   final repository = ref.watch(moduleRepositoryProvider);
   final cubit = CreateModuleCubit(repository);
 
-  // Dispose when no longer needed
+  // Dispose khi không còn cần thiết
   ref.onDispose(() {
     cubit.close();
   });
 
   return cubit;
 });
-
-/// FlashcardCubit provider
-final flashcardCubitProvider = Provider.autoDispose<FlashcardCubit>((ref) {
-  final repository = ref.watch(flashcardRepositoryProvider);
-  final cubit = FlashcardCubit(repository);
-
-  // Dispose when no longer needed
-  ref.onDispose(() {
-    cubit.close();
-  });
-
-  return cubit;
-});
-
-//-------------------------------------------------------------------------
-// PROVIDERS WITH PARAMETERS
-//-------------------------------------------------------------------------
 
 /// Provider family for ModuleDetailCubit that requires a module ID
 final moduleDetailCubitProvider =
@@ -173,10 +211,10 @@ final moduleDetailCubitProvider =
   final repository = ref.watch(moduleRepositoryProvider);
   final cubit = ModuleDetailCubit(repository);
 
-  // Load module details for the specific ID
+  // Tải dữ liệu cho module cụ thể
   cubit.loadModuleDetails(moduleId);
 
-  // Dispose when no longer needed
+  // Dispose khi không còn cần thiết
   ref.onDispose(() {
     cubit.close();
   });
@@ -190,7 +228,7 @@ final moduleSettingsCubitProvider =
   final repository = ref.watch(moduleRepositoryProvider);
   final cubit = ModuleSettingsCubit(repository, moduleId);
 
-  // Dispose when no longer needed
+  // Dispose khi không còn cần thiết
   ref.onDispose(() {
     cubit.close();
   });
@@ -198,47 +236,26 @@ final moduleSettingsCubitProvider =
   return cubit;
 });
 
-/// A utility class to help with Riverpod + Bloc integration
-class RiverpodBlocHelper {
-  /// Initialize SharedPreferences in the app's main function
-  static Future<ProviderContainer> initializeProviders() async {
-    final prefs = await SharedPreferences.getInstance();
+//-------------------------------------------------------------------------
+// FLASHCARD CUBIT PROVIDERS
+//-------------------------------------------------------------------------
 
-    // Override the provider with the actual instance
-    final container = ProviderContainer(
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(prefs),
-      ],
-    );
+/// FlashcardCubit provider
+final flashcardCubitProvider = Provider.autoDispose<FlashcardCubit>((ref) {
+  final repository = ref.watch(flashcardRepositoryProvider);
+  final cubit = FlashcardCubit(repository);
 
-    return container;
-  }
+  // Dispose khi không còn cần thiết
+  ref.onDispose(() {
+    cubit.close();
+  });
 
-  /// Get a BlocProvider for a specific Cubit from a Riverpod provider
-  static BlocProvider<T> getBlocProvider<T extends Cubit>(
-    Provider<T> provider,
-    WidgetRef ref,
-  ) {
-    return BlocProvider<T>.value(
-      value: ref.read(provider),
-    );
-  }
+  return cubit;
+});
 
-  /// Wrap a widget with all necessary BlocProviders for a specific feature
-  static Widget wrapWithBlocs(
-    Widget child,
-    WidgetRef ref, {
-    List<Provider> providers = const [],
-  }) {
-    final blocProviders = providers.map((provider) {
-      return BlocProvider.value(
-        value: ref.read(provider) as Cubit,
-      );
-    }).toList();
+//-------------------------------------------------------------------------
+// UTILITY FOR DEBUG MODE
+//-------------------------------------------------------------------------
 
-    return MultiBlocProvider(
-      providers: blocProviders,
-      child: child,
-    );
-  }
-}
+/// Hằng số để kiểm tra xem ứng dụng có đang chạy ở chế độ debug hay không
+const bool kDebugMode = !bool.fromEnvironment('dart.vm.product');
