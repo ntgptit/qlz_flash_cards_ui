@@ -9,7 +9,7 @@ import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/class/create_class_screen.dart';
 import '../../features/folder/screens/create_folder_screen.dart';
-import '../../features/home/home_screen.dart';
+import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/quiz/models/quiz_settings.dart';
 import '../../features/quiz/screens/quiz_screen.dart';

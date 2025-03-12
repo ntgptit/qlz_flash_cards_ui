@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 // Features
 import 'package:qlz_flash_cards_ui/features/flashcard/data/repositories/flashcard_repository.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/logic/cubit/flashcard_cubit.dart';
+import 'package:qlz_flash_cards_ui/features/home/logic/cubit/home_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/library/data/repositories/library_repository.dart';
 import 'package:qlz_flash_cards_ui/features/library/logic/cubit/classes_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/library/logic/cubit/folders_cubit.dart';
@@ -39,6 +40,9 @@ class CubitManager {
   late final ModuleRepository _moduleRepository;
   late final FlashcardRepository _flashcardRepository;
 
+  /// Global cubits
+  late final HomeCubit _homeCubit;
+
   /// Flag to check if the manager has been initialized
   bool _isInitialized = false;
 
@@ -55,6 +59,9 @@ class CubitManager {
     _moduleRepository = ModuleRepository(_dio, _prefs);
     _flashcardRepository = FlashcardRepository(_dio, _prefs);
 
+    // Initialize global cubits
+    _homeCubit = HomeCubit();
+
     _isInitialized = true;
   }
 
@@ -65,8 +72,15 @@ class CubitManager {
     _ensureInitialized();
 
     return [
-      // Add any global cubits here that should persist throughout the app
+      // Global cubits that should persist throughout the app
+      BlocProvider<HomeCubit>(create: (_) => _homeCubit),
     ];
+  }
+
+  /// Get the Home Cubit instance
+  HomeCubit get homeCubit {
+    _ensureInitialized();
+    return _homeCubit;
   }
 
   /// Provides Cubits for the Library feature
@@ -95,6 +109,15 @@ class CubitManager {
       BlocProvider<StudyModuleCubit>(
         create: (context) => StudyModuleCubit(_moduleRepository),
       ),
+    ];
+  }
+
+  /// Provides Cubits specifically for the Home feature
+  List<BlocProvider> getHomeProviders() {
+    _ensureInitialized();
+
+    return [
+      BlocProvider<HomeCubit>.value(value: _homeCubit),
     ];
   }
 
