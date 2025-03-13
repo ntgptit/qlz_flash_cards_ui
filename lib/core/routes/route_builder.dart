@@ -10,8 +10,6 @@ import 'package:qlz_flash_cards_ui/features/module/module_module.dart';
 import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
-import '../../features/class/create_class_screen.dart';
-import '../../features/folder/screens/create_folder_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/quiz/models/quiz_settings.dart';
@@ -181,9 +179,17 @@ class RouteBuilder {
           },
         ),
 
-    AppRoutes.createFolder: (_) => const CreateFolderScreen(),
+    AppRoutes.createFolder: (_) => Consumer(
+          builder: (context, ref, _) {
+            return LibraryModule.provideRiverpodCreateFolderScreen(ref: ref);
+          },
+        ),
 
-    AppRoutes.createClass: (_) => const CreateClassScreen(),
+    AppRoutes.createClass: (_) => Consumer(
+          builder: (context, ref, _) {
+            return LibraryModule.provideRiverpodCreateClassScreen(ref: ref);
+          },
+        ),
 
     AppRoutes.learn: (params) => Consumer(
           builder: (context, ref, _) {

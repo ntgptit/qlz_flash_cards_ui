@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/core/managers/cubit_manager.dart';
+import 'package:qlz_flash_cards_ui/features/folder/screens/create_folder_screen.dart';
 import 'package:qlz_flash_cards_ui/features/library/logic/cubit/classes_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/library/logic/cubit/folders_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/library/logic/cubit/study_sets_cubit.dart';
+import 'package:qlz_flash_cards_ui/features/library/presentation/screens/create_class_screen.dart';
 import 'package:qlz_flash_cards_ui/features/module/module_module.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -66,6 +68,45 @@ class LibraryModule {
     return ModuleModule.provideListScreen(
       folderId: folderId,
       folderName: folderName,
+    );
+  }
+
+  /// Cung cấp màn hình tạo thư mục
+  static Widget provideCreateFolderScreen() {
+    return FutureBuilder<SharedPreferences>(
+      future: SharedPreferences.getInstance(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Material(
+            child: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        final prefs = snapshot.data!;
+        final repository = LibraryRepository(Dio(), prefs);
+        final foldersCubit = FoldersCubit(repository);
+
+        return BlocProvider<FoldersCubit>(
+          create: (context) => foldersCubit,
+          child: const CreateFolderScreen(),
+        );
+      },
+    );
+  }
+
+  /// Cung cấp màn hình tạo thư mục với Riverpod
+  static Widget provideRiverpodCreateFolderScreen({
+    required WidgetRef ref,
+  }) {
+    // Lấy foldersCubit từ Riverpod provider
+    final foldersCubit = ref.watch(foldersCubitProvider);
+
+    // Cung cấp foldersCubit thông qua BlocProvider
+    return BlocProvider.value(
+      value: foldersCubit,
+      child: const CreateFolderScreen(),
     );
   }
 
@@ -162,6 +203,45 @@ class LibraryModule {
         classId: classId,
         className: className,
       ),
+    );
+  }
+
+  /// Cung cấp màn hình tạo lớp học
+  static Widget provideCreateClassScreen() {
+    return FutureBuilder<SharedPreferences>(
+      future: SharedPreferences.getInstance(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Material(
+            child: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+
+        final prefs = snapshot.data!;
+        final repository = LibraryRepository(Dio(), prefs);
+        final classesCubit = ClassesCubit(repository);
+
+        return BlocProvider<ClassesCubit>(
+          create: (context) => classesCubit,
+          child: const CreateClassScreen(),
+        );
+      },
+    );
+  }
+
+  /// Cung cấp màn hình tạo lớp học với Riverpod
+  static Widget provideRiverpodCreateClassScreen({
+    required WidgetRef ref,
+  }) {
+    // Lấy classesCubit từ Riverpod provider
+    final classesCubit = ref.watch(classesCubitProvider);
+
+    // Cung cấp classesCubit thông qua BlocProvider
+    return BlocProvider.value(
+      value: classesCubit,
+      child: const CreateClassScreen(),
     );
   }
 

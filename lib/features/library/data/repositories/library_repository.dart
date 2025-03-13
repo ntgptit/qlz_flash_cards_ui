@@ -221,6 +221,51 @@ class LibraryRepository {
     }
   }
 
+  /// Tạo thư mục mới
+  Future<Folder> createFolder({
+    required String name,
+    String? description,
+  }) async {
+    if (_useMockData) {
+      // Giả lập độ trễ API
+      await Future.delayed(const Duration(seconds: 1));
+
+      // Tạo ID ngẫu nhiên và thời gian hiện tại
+      final String newId = DateTime.now().millisecondsSinceEpoch.toString();
+      final DateTime createdAt = DateTime.now();
+
+      // Tạo đối tượng Folder mới
+      final newFolder = Folder(
+        id: newId,
+        name: name,
+        creatorName: 'giapnguyen1994', // Giả lập người tạo
+        hasPlusBadge: true,
+        moduleCount: 0, // Thư mục mới chưa có học phần
+        createdAt: createdAt,
+      );
+
+      return newFolder;
+    }
+
+    try {
+      // Gọi API tạo thư mục (trong môi trường thực tế)
+      final response = await _dio.post('/api/folders', data: {
+        'name': name,
+        'description': description,
+      });
+
+      if (response.statusCode == 201) {
+        final newFolder = Folder.fromJson(response.data);
+        return newFolder;
+      } else {
+        throw Exception('Failed to create folder: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error creating folder: $e');
+      rethrow;
+    }
+  }
+
   // --------- CLASSES API ---------
 
   /// Lấy tất cả lớp học
@@ -280,6 +325,52 @@ class LibraryRepository {
         }
       }
 
+      rethrow;
+    }
+  }
+
+  /// Tạo lớp học mới
+  Future<ClassModel> createClass({
+    required String name,
+    required String description,
+    required bool allowMembersToAdd,
+  }) async {
+    if (_useMockData) {
+      // Giả lập độ trễ API
+      await Future.delayed(const Duration(seconds: 1));
+
+      // Tạo ID ngẫu nhiên và thời gian hiện tại
+      final String newId = DateTime.now().millisecondsSinceEpoch.toString();
+      final DateTime createdAt = DateTime.now();
+
+      // Tạo đối tượng ClassModel mới
+      final newClass = ClassModel(
+        id: newId,
+        name: name,
+        studyModulesCount: 0, // Lớp mới chưa có học phần
+        creatorName: 'giapnguyen1994', // Giả lập người tạo
+        createdAt: createdAt,
+      );
+
+      return newClass;
+    }
+
+    try {
+      // Gọi API tạo lớp học (trong môi trường thực tế)
+      final response = await _dio.post('/api/classes', data: {
+        'name': name,
+        'description': description,
+        'allowMembersToAdd': allowMembersToAdd,
+      });
+
+      if (response.statusCode == 201) {
+        final newClass = ClassModel.fromJson(response.data);
+        return newClass;
+      } else {
+        throw Exception('Failed to create class: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error creating class: $e');
       rethrow;
     }
   }
