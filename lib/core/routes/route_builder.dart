@@ -62,17 +62,20 @@ class RouteBuilder {
     // Library routes that use module pattern
     AppRoutes.library: (_) => LibraryModule.provideRiverpodScreen(),
 
-    AppRoutes.folderDetail: (params) => Consumer(
-          builder: (context, ref, _) {
-            final folderName = params.getString('folderName', 'Unknown');
-            final folderId = params.getString('folderId');
-            return ModuleModule.provideRiverpodListScreen(
-              ref: ref,
-              folderName: folderName,
-              folderId: folderId,
-            );
-          },
-        ),
+    AppRoutes.folderDetail: (params) {
+      return Consumer(
+        builder: (context, ref, _) {
+          final folderName = params.getString('folderName', 'Unknown');
+          final folderId = params.getString('folderId');
+          // Đảm bảo dòng này gọi đúng function
+          return LibraryModule.provideRiverpodFolderDetailScreen(
+            ref: ref,
+            folderName: folderName,
+            folderId: folderId,
+          );
+        },
+      );
+    },
 
     AppRoutes.classDetail: (params) => Consumer(
           builder: (context, ref, _) {

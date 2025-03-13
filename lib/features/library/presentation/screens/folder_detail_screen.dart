@@ -1,5 +1,6 @@
 // lib/features/library/presentation/screens/folder_detail_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
 import 'package:qlz_flash_cards_ui/features/library/logic/cubit/study_sets_cubit.dart';
@@ -13,7 +14,7 @@ import '../../logic/states/study_sets_state.dart';
 import '../widgets/study_set_item.dart';
 
 /// Màn hình hiển thị chi tiết thư mục và danh sách học phần trong thư mục
-class FolderDetailScreen extends StatelessWidget {
+class FolderDetailScreen extends StatefulWidget {
   final String folderId;
   final String folderName;
 
@@ -24,24 +25,102 @@ class FolderDetailScreen extends StatelessWidget {
   });
 
   @override
+  State<FolderDetailScreen> createState() => _FolderDetailScreenState();
+}
+
+class _FolderDetailScreenState extends State<FolderDetailScreen> {
+  bool _loadingTimedOut = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Tải dữ liệu khi màn hình được tạo
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      print("DEBUG: Loading study sets for folder ID: ${widget.folderId}");
+      context.read<StudySetsCubit>().loadStudySetsByFolder(widget.folderId);
+
+      // Thêm timeout để tránh trạng thái loading vô hạn
+      Future.delayed(const Duration(seconds: 15), () {
+        if (mounted && !_loadingTimedOut) {
+          print("DEBUG: Loading timed out for folder screen");
+          setState(() {
+            _loadingTimedOut = true;
+          });
+        }
+      });
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0A092D),
       appBar: QlzAppBar(
-        title: folderName,
+        title: widget.folderName,
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
-            onPressed: () {},
+            onPressed: () {
+              HapticFeedback.lightImpact();
+            },
           ),
           IconButton(
             icon: const Icon(Icons.more_vert),
-            onPressed: () {},
+            onPressed: () {
+              HapticFeedback.lightImpact();
+            },
           ),
         ],
       ),
-      body: BlocBuilder<StudySetsCubit, StudySetsState>(
+      body: BlocConsumer<StudySetsCubit, StudySetsState>(
+        listener: (context, state) {
+          print("DEBUG-Listener: State changed to ${state.status}");
+        },
         builder: (context, state) {
+          print(
+              "DEBUG-Builder: Current state: ${state.status}, studySets: ${state.studySets.length}");
+
+          // Thêm xử lý timeout
+          if (_loadingTimedOut && state.status == StudySetsStatus.loading) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline,
+                      color: Colors.amber, size: 48),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Tải dữ liệu quá lâu',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Có thể có vấn đề với kết nối mạng hoặc máy chủ',
+                    style: TextStyle(color: Colors.white70),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _loadingTimedOut = false;
+                      });
+                      context.read<StudySetsCubit>().loadStudySetsByFolder(
+                          widget.folderId,
+                          forceRefresh: true);
+                    },
+                    child: const Text('Thử lại'),
+                  ),
+                ],
+              ),
+            );
+          }
+
           // Trạng thái loading - chưa có dữ liệu
           if (state.status == StudySetsStatus.loading &&
               state.studySets.isEmpty) {
@@ -60,7 +139,7 @@ class FolderDetailScreen extends StatelessWidget {
               message: state.errorMessage ?? 'Đã xảy ra lỗi khi tải dữ liệu',
               onAction: () => context
                   .read<StudySetsCubit>()
-                  .refreshStudySetsByFolder(folderId),
+                  .loadStudySetsByFolder(widget.folderId, forceRefresh: true),
             );
           }
 
@@ -71,6 +150,7 @@ class FolderDetailScreen extends StatelessWidget {
               message: 'Thư mục này chưa có học phần nào',
               actionLabel: 'Tạo học phần',
               onAction: () {
+                HapticFeedback.mediumImpact();
                 Navigator.pushNamed(
                   context,
                   '/create-study-module',
@@ -83,13 +163,14 @@ class FolderDetailScreen extends StatelessWidget {
           return RefreshIndicator(
             onRefresh: () => context
                 .read<StudySetsCubit>()
-                .refreshStudySetsByFolder(folderId),
+                .loadStudySetsByFolder(widget.folderId, forceRefresh: true),
             child: _buildStudySetsList(context, state),
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
+          HapticFeedback.mediumImpact();
           Navigator.pushNamed(
             context,
             '/create-study-module',
@@ -124,7 +205,9 @@ class FolderDetailScreen extends StatelessWidget {
                   label: 'Sắp xếp',
                   icon: Icons.sort,
                   type: QlzChipType.ghost,
-                  onTap: () {},
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                  },
                 ),
               ],
             ),
@@ -158,6 +241,7 @@ class FolderDetailScreen extends StatelessWidget {
 
   /// Điều hướng đến màn hình chi tiết học phần
   void _navigateToStudySetDetail(BuildContext context, StudySet studySet) {
+    HapticFeedback.selectionClick();
     AppRoutes.navigateToModuleDetail(
       context,
       moduleId: studySet.id,

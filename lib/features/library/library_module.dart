@@ -4,11 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/core/managers/cubit_manager.dart';
-import 'package:qlz_flash_cards_ui/features/folder/screens/create_folder_screen.dart';
 import 'package:qlz_flash_cards_ui/features/library/logic/cubit/classes_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/library/logic/cubit/folders_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/library/logic/cubit/study_sets_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/library/presentation/screens/create_class_screen.dart';
+import 'package:qlz_flash_cards_ui/features/library/presentation/screens/create_folder_screen.dart';
+import 'package:qlz_flash_cards_ui/features/library/presentation/screens/folder_detail_screen.dart';
 import 'package:qlz_flash_cards_ui/features/module/module_module.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -176,11 +177,28 @@ class LibraryModule {
     required String folderId,
     required String folderName,
   }) {
-    // Chuyển tiếp sang ModuleModule để đồng bộ với RouteBuilder
-    return ModuleModule.provideRiverpodListScreen(
-      ref: ref,
-      folderId: folderId,
-      folderName: folderName,
+    print(
+        "DEBUG-LibraryModule: Creating folder detail screen for ID: $folderId");
+
+    // Sử dụng repository từ Riverpod
+    final repository = ref.watch(libraryRepositoryProvider);
+
+    // Tạo cubit mới để tránh lỗi về lifecycle
+    final studySetsCubit = StudySetsCubit(repository);
+
+    print("DEBUG-LibraryModule: Created new StudySetsCubit: $studySetsCubit");
+
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<StudySetsCubit>(
+          create: (context) => studySetsCubit,
+        ),
+        RepositoryProvider.value(value: repository),
+      ],
+      child: FolderDetailScreen(
+        folderId: folderId,
+        folderName: folderName,
+      ),
     );
   }
 

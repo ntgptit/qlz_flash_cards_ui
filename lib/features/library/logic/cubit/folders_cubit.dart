@@ -1,5 +1,6 @@
 // lib/features/library/logic/cubit/folders_cubit.dart
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:qlz_flash_cards_ui/features/library/data/models/folder_model.dart';
 
 import '../../data/repositories/library_repository.dart';
 import '../states/folders_state.dart';
@@ -56,7 +57,7 @@ class FoldersCubit extends Cubit<FoldersState> {
       );
 
       // Thêm thư mục mới vào danh sách hiện tại
-      final updatedFolders = List.from(state.folders)..add(newFolder);
+      final updatedFolders = List<Folder>.from(state.folders)..add(newFolder);
 
       emit(state.copyWith(
         status: FoldersStatus.success,
