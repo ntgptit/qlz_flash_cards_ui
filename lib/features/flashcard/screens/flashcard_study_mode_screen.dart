@@ -1,6 +1,8 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/logic/cubit/flashcard_cubit.dart';
@@ -13,7 +15,6 @@ import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_snackbar.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/layout/qlz_modal.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/study/qlz_flashcard.dart';
-import 'package:qlz_flash_cards_ui/shared/widgets/utils/qlz_chip.dart';
 
 class FlashcardStudyModeScreen extends StatelessWidget {
   final List<Flashcard> flashcards;
@@ -47,61 +48,35 @@ class FlashcardStudyModeView extends StatefulWidget {
 }
 
 class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
-  late final PageController _pageController;
-  double _prevDragDx = 0.0;
-  bool _dialogShown = false;
+  // Controllers
+  final CardSwiperController _cardSwiperController = CardSwiperController();
+  final Map<String, QlzFlashcardController> _flashcardControllers = {};
 
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController(
-      initialPage: 0,
-      viewportFraction: 0.9, // Improves UX by showing part of next/prev cards
-      keepPage: true,
-    );
-  }
+  // State variables
+  bool _dialogShown = false;
+  bool _isAutoPlayEnabled = false;
+  Timer? _autoPlayTimer;
+
+  // Ghi nhớ flashcard hiện tại
+  Flashcard? _currentFlashcard;
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _stopAutoPlayMode();
     super.dispose();
   }
 
-  void _navigateCard(BuildContext context, {required bool isNext}) {
-    final cubit = context.read<FlashcardCubit>();
-    final state = cubit.state;
-
-    // Check boundary conditions
-    if (isNext && state.currentIndex >= state.flashcards.length - 1) {
-      if (!_dialogShown) {
-        _showCompletionDialog(context);
-      }
-      return;
+  // Tạo hoặc lấy controller cho một flashcard cụ thể
+  QlzFlashcardController _getFlashcardController(String flashcardId) {
+    if (!_flashcardControllers.containsKey(flashcardId)) {
+      _flashcardControllers[flashcardId] = QlzFlashcardController();
     }
-
-    if (isNext && state.hasMoreFlashcards) {
-      final nextPage =
-          (state.currentIndex + 1).clamp(0, state.flashcards.length - 1);
-      _pageController.animateToPage(
-        nextPage,
-        duration: const Duration(milliseconds: kIsWeb ? 150 : 300),
-        curve: Curves.easeInOut,
-      );
-    } else if (!isNext && state.currentIndex > 0) {
-      final prevPage =
-          (state.currentIndex - 1).clamp(0, state.flashcards.length - 1);
-      _pageController.animateToPage(
-        prevPage,
-        duration: const Duration(milliseconds: kIsWeb ? 150 : 300),
-        curve: Curves.easeInOut,
-      );
-    }
+    return _flashcardControllers[flashcardId]!;
   }
 
   void _showCompletionDialog(BuildContext context) {
     final cubit = context.read<FlashcardCubit>();
     final state = cubit.state;
-
     _dialogShown = true;
 
     QlzModal.showDialog(
@@ -113,13 +88,117 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
         totalFlashcards: state.totalFlashcards,
         onRestart: () {
           cubit.resetStudySession();
-          if (_pageController.hasClients) {
-            _pageController.jumpToPage(0);
-          }
           _dialogShown = false;
         },
       ),
     ).then((_) => _dialogShown = false);
+  }
+
+  void _toggleAutoPlayMode(BuildContext context) {
+    setState(() {
+      _isAutoPlayEnabled = !_isAutoPlayEnabled;
+    });
+
+    if (_isAutoPlayEnabled) {
+      // Khởi động chuỗi tự động với flashcard hiện tại
+      final state = context.read<FlashcardCubit>().state;
+      _currentFlashcard = state.currentFlashcard;
+      _runAutoPlaySequence(context);
+    } else {
+      _stopAutoPlayMode();
+    }
+  }
+
+  void _runAutoPlaySequence(BuildContext context) {
+    if (!mounted || !_isAutoPlayEnabled) return;
+
+    final cubit = context.read<FlashcardCubit>();
+    final state = cubit.state;
+
+    if (state.flashcards.isEmpty) {
+      _stopAutoPlayMode();
+      return;
+    }
+
+    // Lấy controller cho flashcard hiện tại
+    final flashcardId = state.currentFlashcard?.id ?? '';
+    final controller = _getFlashcardController(flashcardId);
+
+    // Đầu tiên lật thẻ để xem định nghĩa (nếu đang ở mặt trước)
+    if (controller.isShowingFront) {
+      controller.flip();
+
+      // Đợi 5 giây để người dùng đọc định nghĩa
+      _autoPlayTimer = Timer(const Duration(seconds: 5), () {
+        if (!mounted || !_isAutoPlayEnabled) return;
+
+        // Lật lại mặt trước
+        controller.flip();
+
+        // Đợi lật xong
+        _autoPlayTimer = Timer(const Duration(milliseconds: 600), () {
+          if (!mounted || !_isAutoPlayEnabled) return;
+
+          // Kiểm tra nếu đây là thẻ cuối cùng
+          if (state.currentIndex < state.flashcards.length - 1) {
+            // Nếu chưa phải thẻ cuối, chuyển sang thẻ kế tiếp bằng swipe right (đã thuộc)
+            cubit.markAsLearned(); // Đánh dấu thẻ hiện tại là đã học
+            _cardSwiperController.swipe(CardSwiperDirection.right);
+
+            // Đợi animation chuyển thẻ hoàn tất
+            _autoPlayTimer = Timer(const Duration(seconds: 1), () {
+              if (mounted && _isAutoPlayEnabled) {
+                // Tiếp tục chuỗi với thẻ mới
+                _runAutoPlaySequence(context);
+              }
+            });
+          } else {
+            // Nếu là thẻ cuối cùng
+            _stopAutoPlayMode();
+            if (!_dialogShown) {
+              _showCompletionDialog(context);
+            }
+          }
+        });
+      });
+    } else {
+      // Nếu đang ở mặt sau, lật về mặt trước trước khi chuyển
+      controller.flip();
+
+      // Đợi lật xong
+      _autoPlayTimer = Timer(const Duration(milliseconds: 600), () {
+        if (!mounted || !_isAutoPlayEnabled) return;
+
+        // Kiểm tra nếu đây là thẻ cuối cùng
+        if (state.currentIndex < state.flashcards.length - 1) {
+          // Nếu chưa phải thẻ cuối, chuyển sang thẻ kế tiếp
+          cubit.markAsLearned(); // Đánh dấu thẻ hiện tại là đã học
+          _cardSwiperController.swipe(CardSwiperDirection.right);
+
+          // Đợi animation chuyển thẻ hoàn tất
+          _autoPlayTimer = Timer(const Duration(seconds: 1), () {
+            if (mounted && _isAutoPlayEnabled) {
+              // Tiếp tục chuỗi với thẻ mới
+              _runAutoPlaySequence(context);
+            }
+          });
+        } else {
+          // Nếu là thẻ cuối cùng
+          _stopAutoPlayMode();
+          if (!_dialogShown) {
+            _showCompletionDialog(context);
+          }
+        }
+      });
+    }
+  }
+
+  void _stopAutoPlayMode() {
+    _autoPlayTimer?.cancel();
+    _autoPlayTimer = null;
+    setState(() {
+      _isAutoPlayEnabled = false;
+    });
   }
 
   Future<void> _toggleFlashcardDifficulty(Flashcard flashcard) async {
@@ -138,23 +217,14 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
   Widget build(BuildContext context) {
     return BlocConsumer<FlashcardCubit, FlashcardState>(
       listener: (context, state) {
-        // Ensure PageController is synchronized with state
-        if (_pageController.hasClients &&
-            state.status == FlashcardStatus.success &&
-            _pageController.page?.round() != state.currentIndex) {
-          _pageController.animateToPage(
-            state.currentIndex,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
-        }
-
-        // Show completion dialog when session is complete
         if (state.isSessionCompleted &&
             !state.hasMoreFlashcards &&
             !_dialogShown) {
           _showCompletionDialog(context);
         }
+
+        // Cập nhật flashcard hiện tại khi thay đổi
+        _currentFlashcard = state.currentFlashcard;
       },
       builder: (context, state) {
         switch (state.status) {
@@ -193,6 +263,29 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
   }
 
   Widget _buildStudyInterface(BuildContext context, FlashcardState state) {
+    // Tạo danh sách các thẻ để hiển thị trong swiper
+    final flashcardWidgets = state.flashcards.map((flashcard) {
+      // Tạo hoặc lấy controller cho flashcard
+      final controller = _getFlashcardController(flashcard.id);
+
+      return Container(
+        margin: const EdgeInsets.all(20),
+        child: QlzFlashcard(
+          key: ValueKey(flashcard.id),
+          controller: controller,
+          term: flashcard.term,
+          definition: flashcard.definition,
+          example: flashcard.example,
+          pronunciation: flashcard.pronunciation,
+          isDifficult: flashcard.isDifficult,
+          onAudioPlay: () {
+            // Implement audio playback logic
+          },
+          onMarkAsDifficult: () => _toggleFlashcardDifficulty(flashcard),
+        ),
+      );
+    }).toList();
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A092D),
       appBar: QlzAppBar(
@@ -202,222 +295,233 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
           tooltip: 'Đóng',
         ),
         title: '${state.currentIndex + 1}/${state.totalFlashcards}',
-        actions: [
-          IconButton(
-            icon: Icon(
-              state.currentFlashcard?.isDifficult ?? false
-                  ? Icons.star
-                  : Icons.star_border,
-            ),
-            tooltip: "Đánh dấu khó",
-            onPressed: state.currentFlashcard != null
-                ? () => _toggleFlashcardDifficulty(state.currentFlashcard!)
-                : null,
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: "Bắt đầu lại",
-            onPressed: () {
-              context.read<FlashcardCubit>().resetStudySession();
-              if (_pageController.hasClients) {
-                _pageController.jumpToPage(0);
-              }
-            },
-          ),
-        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(4),
           child: FlashcardProgressBar(progress: state.progressFraction),
         ),
       ),
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final isWideScreen = constraints.maxWidth > 600;
-            return Row(
-              children: [
-                if (isWideScreen)
-                  Expanded(
-                    flex: 2,
-                    child: _buildSidePanel(context, state),
+        child: Column(
+          children: [
+            // Counters for learned/not learned terms
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  _buildCounter(
+                    count: state.notLearnedCount,
+                    color: Colors.orange,
+                    isLeftSide: true,
                   ),
-                Expanded(
-                  flex: isWideScreen ? 5 : 1,
-                  child: _buildMainContent(context, state),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSidePanel(BuildContext context, FlashcardState state) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          QlzChip(
-            label: 'Chưa thuộc: ${state.notLearnedCount}',
-            type: QlzChipType.warning,
-            icon: Icons.access_time,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          ),
-          const SizedBox(height: 20),
-          QlzChip(
-            label: 'Đã thuộc: ${state.learnedCount}',
-            type: QlzChipType.success,
-            icon: Icons.check_circle_outline,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          ),
-          const SizedBox(height: 40),
-          OutlinedButton.icon(
-            onPressed: () {
-              context.read<FlashcardCubit>().resetStudySession();
-              if (_pageController.hasClients) {
-                _pageController.jumpToPage(0);
-              }
-            },
-            icon: const Icon(Icons.refresh, size: 20),
-            label: const Text("Bắt đầu lại"),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.white,
-              side: const BorderSide(color: Colors.white30),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  const Spacer(),
+                  _buildCounter(
+                    count: state.learnedCount,
+                    color: Colors.green,
+                    isLeftSide: false,
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+
+            // Flashcard area with CardSwiper
+            Expanded(
+              child: flashcardWidgets.isEmpty
+                  ? const Center(
+                      child: Text('Không có thẻ nào',
+                          style: TextStyle(color: Colors.white)))
+                  : CardSwiper(
+                      controller: _cardSwiperController,
+                      cardsCount: flashcardWidgets.length,
+                      initialIndex: state.currentIndex,
+                      isLoop: false,
+                      allowedSwipeDirection: _isAutoPlayEnabled
+                          ? const AllowedSwipeDirection.none()
+                          : const AllowedSwipeDirection.all(),
+                      onSwipe: (previousIndex, currentIndex, direction) {
+                        if (direction == CardSwiperDirection.left) {
+                          // Vuốt trái - đánh dấu đang học (chưa thuộc)
+                          context.read<FlashcardCubit>().markAsNotLearned();
+                        } else if (direction == CardSwiperDirection.right) {
+                          // Vuốt phải - đánh dấu đã thuộc
+                          context.read<FlashcardCubit>().markAsLearned();
+                        }
+
+                        // Cập nhật index hiện tại
+                        if (currentIndex != null &&
+                            currentIndex != state.currentIndex) {
+                          context
+                              .read<FlashcardCubit>()
+                              .onPageChanged(currentIndex);
+                        }
+
+                        return true;
+                      },
+                      onEnd: () {
+                        if (!_dialogShown) {
+                          _showCompletionDialog(context);
+                        }
+                      },
+                      numberOfCardsDisplayed: 1,
+                      backCardOffset: const Offset(0, 0),
+                      padding: const EdgeInsets.all(0),
+                      cardBuilder: (context, index, percentThresholdX,
+                          percentThresholdY) {
+                        // Thêm hiệu ứng màu cho thẻ khi vuốt
+                        Color overlayColor = Colors.transparent;
+                        IconData? overlayIcon;
+
+                        // Đảm bảo opacity nằm trong khoảng [0.0, 1.0]
+                        double opacity = 0.0;
+
+                        // Xác định màu overlay dựa vào hướng vuốt
+                        if (percentThresholdX.abs() > 0.1) {
+                          // Giới hạn giá trị opacity từ 0.0 đến 1.0
+                          opacity =
+                              (percentThresholdX.abs() * 0.5).clamp(0.0, 1.0);
+
+                          if (percentThresholdX > 0) {
+                            // Vuốt phải - đã thuộc (màu xanh)
+                            overlayColor = Colors.green;
+                            overlayIcon = Icons.check;
+                          } else {
+                            // Vuốt trái - đang học (màu cam)
+                            overlayColor = Colors.orange;
+                            overlayIcon = Icons.refresh;
+                          }
+                        }
+
+                        return Stack(
+                          children: [
+                            // Thẻ gốc
+                            flashcardWidgets[index],
+
+                            // Overlay màu khi vuốt
+                            Positioned.fill(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: overlayColor.withOpacity(opacity),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: opacity > 0.2
+                                    ? Center(
+                                        child: Icon(
+                                          overlayIcon,
+                                          color: Colors.white,
+                                          size: 100,
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+            ),
+
+            // Swipe guidance text
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                children: [
+                  const Text(
+                    'Chạm vào thẻ để lật',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Vuốt phải: Đã biết | Vuốt trái: Đang học',
+                    style: TextStyle(
+                        color: Colors.white.withOpacity(0.7), fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+
+            // Navigation buttons
+            Padding(
+              padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildActionButton(
+                    icon: Icons.arrow_back,
+                    color: Colors.grey,
+                    onPressed: _isAutoPlayEnabled
+                        ? null
+                        : () {
+                            if (state.currentIndex > 0) {
+                              _cardSwiperController
+                                  .swipe(CardSwiperDirection.bottom);
+                            }
+                          },
+                    tooltip: 'Quay lại',
+                    isDisabled: _isAutoPlayEnabled || state.currentIndex == 0,
+                  ),
+                  _buildActionButton(
+                    icon: _isAutoPlayEnabled ? Icons.pause : Icons.play_arrow,
+                    color: AppColors.primary,
+                    onPressed: () => _toggleAutoPlayMode(context),
+                    tooltip: _isAutoPlayEnabled ? 'Tạm dừng' : 'Tự động phát',
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildMainContent(BuildContext context, FlashcardState state) {
-    return Column(
-      children: [
-        Expanded(
-          child: PageView.builder(
-            controller: _pageController,
-            physics: const BouncingScrollPhysics(),
-            itemCount: state.flashcards.length,
-            onPageChanged: (index) {
-              // Use the dedicated method in the cubit to handle page changes
-              context.read<FlashcardCubit>().onPageChanged(index);
-            },
-            itemBuilder: (_, index) {
-              final flashcard = state.flashcards[index];
-              return GestureDetector(
-                onHorizontalDragStart: (details) =>
-                    _prevDragDx = details.globalPosition.dx,
-                onHorizontalDragEnd: (details) {
-                  // Skip custom drag handling on web
-                  if (kIsWeb) return;
-
-                  // Threshold for considering it a swipe
-                  final dragDistance = _prevDragDx - details.globalPosition.dx;
-                  if (dragDistance.abs() > 60) {
-                    final isSwipeRight = dragDistance > 0;
-
-                    // Use PageController to animate instead of directly setting state
-                    if (isSwipeRight && index < state.flashcards.length - 1) {
-                      _pageController.nextPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
-                    } else if (!isSwipeRight && index > 0) {
-                      _pageController.previousPage(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
-                    }
-                  }
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: QlzFlashcard(
-                    key: ValueKey(flashcard.id), // Optimize rebuilds
-                    term: flashcard.term,
-                    definition: flashcard.definition,
-                    example: flashcard.example,
-                    pronunciation: flashcard.pronunciation,
-                    isDifficult: flashcard.isDifficult,
-                    onMarkAsDifficult: () =>
-                        _toggleFlashcardDifficulty(flashcard),
-                  ),
-                ),
-              );
-            },
-          ),
+  Widget _buildCounter({
+    required int count,
+    required Color color,
+    required bool isLeftSide,
+  }) {
+    return Container(
+      width: 70,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.horizontal(
+          left: isLeftSide ? const Radius.circular(20) : Radius.zero,
+          right: !isLeftSide ? const Radius.circular(20) : Radius.zero,
         ),
-        Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildActionButton(
-                icon: Icons.arrow_back,
-                color: Colors.grey,
-                onPressed: () => _navigateCard(context, isNext: false),
-                tooltip: 'Quay lại',
-              ),
-              _buildActionButton(
-                icon: Icons.close,
-                color: AppColors.warning,
-                onPressed: () {
-                  final cubit = context.read<FlashcardCubit>();
-                  cubit.markAsNotLearned();
-
-                  // Navigate to next card after marking
-                  if (state.currentIndex < state.flashcards.length - 1) {
-                    _navigateCard(context, isNext: true);
-                  } else if (!_dialogShown) {
-                    _showCompletionDialog(context);
-                  }
-                },
-                tooltip: 'Chưa thuộc',
-              ),
-              _buildActionButton(
-                icon: Icons.check,
-                color: AppColors.success,
-                onPressed: () {
-                  final cubit = context.read<FlashcardCubit>();
-                  cubit.markAsLearned();
-
-                  // Navigate to next card after marking
-                  if (state.currentIndex < state.flashcards.length - 1) {
-                    _navigateCard(context, isNext: true);
-                  } else if (!_dialogShown) {
-                    _showCompletionDialog(context);
-                  }
-                },
-                tooltip: 'Đã thuộc',
-              ),
-            ],
-          ),
+        border: Border.all(color: color, width: 1),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        '$count',
+        style: TextStyle(
+          color: color,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
         ),
-      ],
+      ),
     );
   }
 
   Widget _buildActionButton({
     required IconData icon,
     required Color color,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
     String? tooltip,
+    bool isDisabled = false,
   }) {
     return Material(
       color: Colors.transparent,
       shape: const CircleBorder(),
       clipBehavior: Clip.antiAlias,
       child: IconButton.filledTonal(
-        onPressed: onPressed,
+        onPressed: isDisabled ? null : onPressed,
         icon: Icon(icon),
         tooltip: tooltip,
         iconSize: 32,
         style: IconButton.styleFrom(
-          backgroundColor: color.withOpacity(0.2),
-          foregroundColor: color,
+          backgroundColor: isDisabled
+              ? Colors.grey.withOpacity(0.1)
+              : color.withOpacity(0.2),
+          foregroundColor: isDisabled ? Colors.grey : color,
           minimumSize: const Size(56, 56),
         ),
       ),

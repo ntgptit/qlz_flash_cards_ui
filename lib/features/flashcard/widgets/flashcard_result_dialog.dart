@@ -1,26 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:qlz_flash_cards_ui/config/app_colors.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/buttons/qlz_button.dart';
 
-import '../../../config/app_colors.dart';
-import '../../../shared/widgets/buttons/qlz_button.dart';
-
-/// A widget that displays the results of a flashcard study session
 class FlashcardResultDialog extends StatelessWidget {
-  /// The number of flashcards marked as learned
   final int learnedCount;
-
-  /// The number of flashcards marked as not learned
   final int notLearnedCount;
-
-  /// The total number of flashcards in the session
   final int totalFlashcards;
-
-  /// Callback when the "Restart" button is pressed
   final VoidCallback? onRestart;
-
-  /// Callback when the "Continue" button is pressed
   final VoidCallback? onContinue;
 
-  /// Creates a FlashcardResultDialog instance
   const FlashcardResultDialog({
     super.key,
     required this.learnedCount,
@@ -78,7 +66,6 @@ class FlashcardResultDialog extends StatelessWidget {
                   label: "Bắt đầu lại",
                   icon: Icons.refresh,
                   onPressed: () {
-                    // Đóng dialog trước, sau đó gọi callback
                     Navigator.pop(context);
                     onRestart!();
                   },
