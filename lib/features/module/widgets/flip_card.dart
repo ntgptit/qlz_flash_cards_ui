@@ -28,7 +28,7 @@ class FlipCard extends StatelessWidget {
       builder: (context, double value, child) {
         // Front face disappears at 90 degrees, back face appears after 90 degrees
         final showFrontFace = value < (pi / 2);
-        
+
         return QlzCard(
           margin: const EdgeInsets.all(20),
           child: Transform(

@@ -1,170 +1,263 @@
-// lib/features/module/data/repositories/module_repository.dart
-import 'dart:async';
+// C:/Users/ntgpt/OneDrive/workspace/qlz_flash_cards_ui/lib/features/module/data/repositories/module_repository.dart
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
+import 'package:qlz_flash_cards_ui/features/module/data/models/module_settings_model.dart';
+import 'package:qlz_flash_cards_ui/features/module/data/models/study_module_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../models/module_settings_model.dart';
-import '../models/study_module_model.dart';
+sealed class CacheKeys {
+  static const moduleList = 'module_list';
+  static const moduleDetailPrefix = 'module_detail_';
+  static const moduleSettingsPrefix = 'module_settings_';
+  static const lastSyncKey = 'module_last_sync';
+  static const cacheExpiryPrefix = 'cache_expiry_';
+
+  static String moduleDetail(String id) => '$moduleDetailPrefix$id';
+  static String moduleSettings(String id) => '$moduleSettingsPrefix$id';
+  static String folderModules(String folderId) =>
+      '${moduleList}_folder_$folderId';
+  static String cacheExpiry(String key) => '$cacheExpiryPrefix$key';
+}
+
+class ModuleException implements Exception {
+  final String message;
+  final StackTrace? stackTrace;
+
+  ModuleException(this.message, [this.stackTrace]);
+
+  @override
+  String toString() => message;
+}
+
+class NetworkTimeoutException extends ModuleException {
+  NetworkTimeoutException(super.message);
+}
+
+class PermissionException extends ModuleException {
+  PermissionException(super.message);
+}
 
 class ModuleRepository {
   final Dio _dio;
   final SharedPreferences _prefs;
-  
-  // Cache keys
-  static const String _moduleListKey = 'module_list';
-  static const String _moduleDetailPrefix = 'module_detail_';
-  static const String _moduleSettingsPrefix = 'module_settings_';
-  static const String _lastSyncKey = 'module_last_sync';
-  
-  // Mock data for development purpose
+  static const int _defaultCacheExpiryHours = 1;
   final bool _useMockData = true;
 
   ModuleRepository(this._dio, this._prefs);
 
-  // Fetch all study modules
-  Future<List<StudyModule>> getStudyModules({bool forceRefresh = false}) async {
+  Future<List<StudyModule>> getStudyModules({
+    bool forceRefresh = false,
+    Map<String, dynamic>? queryParams,
+    CancelToken? cancelToken,
+  }) async {
     if (_useMockData) {
       await Future.delayed(const Duration(milliseconds: 800));
       return _getMockModules();
     }
-    
+
     try {
-      if (!forceRefresh && _isCacheValid()) {
-        final cachedData = _prefs.getString(_moduleListKey);
+      if (!forceRefresh) {
+        final cachedData = await _getCachedData<List<StudyModule>>(
+          CacheKeys.moduleList,
+          (json) =>
+              (json as List).map((item) => StudyModule.fromJson(item)).toList(),
+        );
         if (cachedData != null) {
-          try {
-            final List<dynamic> decoded = jsonDecode(cachedData) as List<dynamic>;
-            return decoded.map((json) => StudyModule.fromJson(json)).toList();
-          } catch (e) {
-            debugPrint('Error decoding cached modules: $e');
-          }
+          return cachedData;
         }
       }
-      
-      // Fetch from API
-      final response = await _dio.get('/api/modules');
-      
+
+      final response = await _dio.get(
+        '/api/modules',
+        queryParameters: queryParams,
+        cancelToken: cancelToken,
+      );
+
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data['data'];
         final modules = data.map((json) => StudyModule.fromJson(json)).toList();
-        
-        // Cache the result
-        try {
-          await _prefs.setString(_moduleListKey, jsonEncode(modules.map((e) => e.toJson()).toList()));
-          await _prefs.setString(_lastSyncKey, DateTime.now().toIso8601String());
-        } catch (e) {
-          debugPrint('Error caching modules: $e');
-        }
-        
+        await _cacheData(CacheKeys.moduleList, modules);
         return modules;
       } else {
-        throw Exception('Failed to load modules: ${response.statusCode}');
+        throw DioException(
+          requestOptions: RequestOptions(path: '/api/modules'),
+          response: response,
+          error: 'Failed to load modules: ${response.statusCode}',
+        );
       }
+    } on DioException catch (e) {
+      debugPrint('Network error fetching modules: ${e.message}');
+
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.sendTimeout) {
+        throw NetworkTimeoutException('Không thể kết nối đến máy chủ');
+      }
+
+      // Trả về dữ liệu cache nếu có
+      final cachedData = await _getCachedData<List<StudyModule>>(
+        CacheKeys.moduleList,
+        (json) =>
+            (json as List).map((item) => StudyModule.fromJson(item)).toList(),
+      );
+
+      if (cachedData != null) {
+        return cachedData;
+      }
+
+      throw ModuleException('Không thể tải danh sách học phần: ${e.message}');
     } catch (e) {
       debugPrint('Error fetching modules: $e');
-      
-      // Try to use cached data if available
-      final cachedData = _prefs.getString(_moduleListKey);
-      if (cachedData != null) {
-        try {
-          final List<dynamic> decoded = jsonDecode(cachedData) as List<dynamic>;
-          return decoded.map((json) => StudyModule.fromJson(json)).toList();
-        } catch (e) {
-          debugPrint('Error using cached data: $e');
-        }
-      }
-      
-      // If no cached data or error, rethrow
-      rethrow;
+      throw ModuleException('Đã xảy ra lỗi: $e');
     }
   }
 
-  // Fetch study modules in a folder
-  Future<List<StudyModule>> getStudyModulesByFolder(String folderId, {bool forceRefresh = false}) async {
+  Future<List<StudyModule>> getStudyModulesByFolder(
+    String folderId, {
+    bool forceRefresh = false,
+    CancelToken? cancelToken,
+  }) async {
     if (_useMockData) {
       await Future.delayed(const Duration(milliseconds: 800));
       return _getMockModulesByFolder(folderId);
     }
-    
+
+    final cacheKey = CacheKeys.folderModules(folderId);
+
     try {
-      // Fetch from API
-      final response = await _dio.get('/api/folders/$folderId/modules');
-      
+      if (!forceRefresh) {
+        final cachedData = await _getCachedData<List<StudyModule>>(
+          cacheKey,
+          (json) =>
+              (json as List).map((item) => StudyModule.fromJson(item)).toList(),
+        );
+        if (cachedData != null) {
+          return cachedData;
+        }
+      }
+
+      final response = await _dio.get(
+        '/api/folders/$folderId/modules',
+        cancelToken: cancelToken,
+      );
+
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data['data'];
-        return data.map((json) => StudyModule.fromJson(json)).toList();
+        final modules = data.map((json) => StudyModule.fromJson(json)).toList();
+        await _cacheData(cacheKey, modules);
+        return modules;
       } else {
-        throw Exception('Failed to load modules by folder: ${response.statusCode}');
+        throw DioException(
+          requestOptions:
+              RequestOptions(path: '/api/folders/$folderId/modules'),
+          response: response,
+          error: 'Failed to load modules by folder: ${response.statusCode}',
+        );
       }
+    } on DioException catch (e) {
+      debugPrint('Network error fetching modules by folder: ${e.message}');
+
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.sendTimeout) {
+        throw NetworkTimeoutException('Không thể kết nối đến máy chủ');
+      }
+
+      // Trả về dữ liệu cache nếu có
+      final cachedData = await _getCachedData<List<StudyModule>>(
+        cacheKey,
+        (json) =>
+            (json as List).map((item) => StudyModule.fromJson(item)).toList(),
+      );
+
+      if (cachedData != null) {
+        return cachedData;
+      }
+
+      throw ModuleException(
+          'Không thể tải danh sách học phần trong thư mục: ${e.message}');
     } catch (e) {
       debugPrint('Error fetching modules by folder: $e');
-      rethrow;
+      throw ModuleException('Đã xảy ra lỗi: $e');
     }
   }
 
-  // Get a single module by ID
-  Future<StudyModule> getStudyModuleById(String id, {bool forceRefresh = false}) async {
+  Future<StudyModule> getStudyModuleById(
+    String id, {
+    bool forceRefresh = false,
+    CancelToken? cancelToken,
+  }) async {
     if (_useMockData) {
       await Future.delayed(const Duration(milliseconds: 500));
       return _getMockModuleById(id);
     }
-    
+
+    final cacheKey = CacheKeys.moduleDetail(id);
+
     try {
       if (!forceRefresh) {
-        final cacheKey = '$_moduleDetailPrefix$id';
-        final cachedData = _prefs.getString(cacheKey);
+        final cachedData = await _getCachedData<StudyModule>(
+          cacheKey,
+          (json) => StudyModule.fromJson(json),
+        );
         if (cachedData != null) {
-          try {
-            return StudyModule.fromJson(jsonDecode(cachedData) as Map<String, dynamic>);
-          } catch (e) {
-            debugPrint('Error decoding cached module: $e');
-          }
+          return cachedData;
         }
       }
-      
-      // Fetch from API
-      final response = await _dio.get('/api/modules/$id');
-      
+
+      final response = await _dio.get(
+        '/api/modules/$id',
+        cancelToken: cancelToken,
+      );
+
       if (response.statusCode == 200) {
-        final module = StudyModule.fromJson(response.data as Map<String, dynamic>);
-        
-        // Cache the result
-        final cacheKey = '$_moduleDetailPrefix$id';
-        try {
-          await _prefs.setString(cacheKey, jsonEncode(module.toJson()));
-        } catch (e) {
-          debugPrint('Error caching module: $e');
-        }
-        
+        final module = StudyModule.fromJson(response.data);
+        await _cacheData(cacheKey, module);
         return module;
       } else {
-        throw Exception('Failed to load module: ${response.statusCode}');
+        throw DioException(
+          requestOptions: RequestOptions(path: '/api/modules/$id'),
+          response: response,
+          error: 'Failed to load module: ${response.statusCode}',
+        );
       }
+    } on DioException catch (e) {
+      debugPrint('Network error fetching module details: ${e.message}');
+
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.sendTimeout) {
+        throw NetworkTimeoutException('Không thể kết nối đến máy chủ');
+      }
+
+      if (e.response?.statusCode == 404) {
+        throw ModuleException('Không tìm thấy học phần');
+      }
+
+      // Trả về dữ liệu cache nếu có
+      final cachedData = await _getCachedData<StudyModule>(
+        cacheKey,
+        (json) => StudyModule.fromJson(json),
+      );
+
+      if (cachedData != null) {
+        return cachedData;
+      }
+
+      throw ModuleException('Không thể tải thông tin học phần: ${e.message}');
     } catch (e) {
       debugPrint('Error fetching module: $e');
-      
-      // Try to use cached data if available
-      final cacheKey = '$_moduleDetailPrefix$id';
-      final cachedData = _prefs.getString(cacheKey);
-      if (cachedData != null) {
-        try {
-          return StudyModule.fromJson(jsonDecode(cachedData) as Map<String, dynamic>);
-        } catch (e) {
-          debugPrint('Error using cached data: $e');
-        }
-      }
-      
-      // If no cached data or error, rethrow
-      rethrow;
+      throw ModuleException('Đã xảy ra lỗi: $e');
     }
   }
 
-  // Create a new study module
-  Future<StudyModule> createStudyModule(StudyModule module) async {
+  Future<StudyModule> createStudyModule(
+    StudyModule module, {
+    CancelToken? cancelToken,
+  }) async {
     if (_useMockData) {
       await Future.delayed(const Duration(seconds: 1));
       return module.copyWith(
@@ -172,230 +265,358 @@ class ModuleRepository {
         createdAt: DateTime.now(),
       );
     }
-    
+
     try {
       final response = await _dio.post(
         '/api/modules',
         data: module.toJson(),
+        cancelToken: cancelToken,
       );
-      
+
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final createdModule = StudyModule.fromJson(response.data as Map<String, dynamic>);
-        
-        // Update cache
-        _updateModuleInCache(createdModule);
-        
+        final createdModule = StudyModule.fromJson(response.data);
+        await _updateModuleInCache(createdModule);
         return createdModule;
       } else {
-        throw Exception('Failed to create module: ${response.statusCode}');
+        throw DioException(
+          requestOptions: RequestOptions(path: '/api/modules'),
+          response: response,
+          error: 'Failed to create module: ${response.statusCode}',
+        );
       }
+    } on DioException catch (e) {
+      debugPrint('Network error creating module: ${e.message}');
+
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.sendTimeout) {
+        throw NetworkTimeoutException('Không thể kết nối đến máy chủ');
+      }
+
+      if (e.response?.statusCode == 403) {
+        throw PermissionException('Bạn không có quyền tạo học phần');
+      }
+
+      throw ModuleException('Không thể tạo học phần: ${e.message}');
     } catch (e) {
       debugPrint('Error creating module: $e');
-      rethrow;
+      throw ModuleException('Đã xảy ra lỗi: $e');
     }
   }
 
-  // Update an existing study module
-  Future<StudyModule> updateStudyModule(StudyModule module) async {
+  Future<StudyModule> updateStudyModule(
+    StudyModule module, {
+    CancelToken? cancelToken,
+  }) async {
     if (_useMockData) {
       await Future.delayed(const Duration(seconds: 1));
       return module.copyWith(lastUpdatedAt: DateTime.now());
     }
-    
+
     try {
       final response = await _dio.put(
         '/api/modules/${module.id}',
         data: module.toJson(),
+        cancelToken: cancelToken,
       );
-      
+
       if (response.statusCode == 200) {
-        final updatedModule = StudyModule.fromJson(response.data as Map<String, dynamic>);
-        
-        // Update cache
-        _updateModuleInCache(updatedModule);
-        
+        final updatedModule = StudyModule.fromJson(response.data);
+        await _updateModuleInCache(updatedModule);
         return updatedModule;
       } else {
-        throw Exception('Failed to update module: ${response.statusCode}');
+        throw DioException(
+          requestOptions: RequestOptions(path: '/api/modules/${module.id}'),
+          response: response,
+          error: 'Failed to update module: ${response.statusCode}',
+        );
       }
+    } on DioException catch (e) {
+      debugPrint('Network error updating module: ${e.message}');
+
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.sendTimeout) {
+        throw NetworkTimeoutException('Không thể kết nối đến máy chủ');
+      }
+
+      if (e.response?.statusCode == 403) {
+        throw PermissionException('Bạn không có quyền cập nhật học phần này');
+      }
+
+      if (e.response?.statusCode == 404) {
+        throw ModuleException('Không tìm thấy học phần để cập nhật');
+      }
+
+      throw ModuleException('Không thể cập nhật học phần: ${e.message}');
     } catch (e) {
       debugPrint('Error updating module: $e');
-      rethrow;
+      throw ModuleException('Đã xảy ra lỗi: $e');
     }
   }
 
-  // Delete a study module
-  Future<bool> deleteStudyModule(String id) async {
+  Future<bool> deleteStudyModule(
+    String id, {
+    CancelToken? cancelToken,
+  }) async {
     if (_useMockData) {
       await Future.delayed(const Duration(seconds: 1));
       return true;
     }
-    
+
     try {
-      final response = await _dio.delete('/api/modules/$id');
-      
+      final response = await _dio.delete(
+        '/api/modules/$id',
+        cancelToken: cancelToken,
+      );
+
       if (response.statusCode == 200 || response.statusCode == 204) {
-        // Remove from cache
-        final cacheKey = '$_moduleDetailPrefix$id';
-        await _prefs.remove(cacheKey);
-        
-        // Update module list cache
-        final moduleListCache = _prefs.getString(_moduleListKey);
-        if (moduleListCache != null) {
-          try {
-            final List<dynamic> decoded = jsonDecode(moduleListCache) as List<dynamic>;
-            final modules = decoded
-                .map((json) => StudyModule.fromJson(json))
-                .where((module) => module.id != id)
-                .toList();
-                
-            await _prefs.setString(_moduleListKey, jsonEncode(modules.map((e) => e.toJson()).toList()));
-          } catch (e) {
-            debugPrint('Error updating module list cache: $e');
-          }
-        }
-        
+        await _removeFromCache(id);
         return true;
       } else {
-        throw Exception('Failed to delete module: ${response.statusCode}');
+        throw DioException(
+          requestOptions: RequestOptions(path: '/api/modules/$id'),
+          response: response,
+          error: 'Failed to delete module: ${response.statusCode}',
+        );
       }
+    } on DioException catch (e) {
+      debugPrint('Network error deleting module: ${e.message}');
+
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.sendTimeout) {
+        throw NetworkTimeoutException('Không thể kết nối đến máy chủ');
+      }
+
+      if (e.response?.statusCode == 403) {
+        throw PermissionException('Bạn không có quyền xóa học phần này');
+      }
+
+      if (e.response?.statusCode == 404) {
+        throw ModuleException('Không tìm thấy học phần để xóa');
+      }
+
+      throw ModuleException('Không thể xóa học phần: ${e.message}');
     } catch (e) {
       debugPrint('Error deleting module: $e');
-      rethrow;
+      throw ModuleException('Đã xảy ra lỗi: $e');
     }
   }
 
-  // Get module settings
-  Future<ModuleSettings> getModuleSettings(String moduleId) async {
+  Future<ModuleSettings> getModuleSettings(
+    String moduleId, {
+    CancelToken? cancelToken,
+  }) async {
     if (_useMockData) {
       await Future.delayed(const Duration(milliseconds: 500));
       return const ModuleSettings();
     }
-    
+
+    final cacheKey = CacheKeys.moduleSettings(moduleId);
+
     try {
-      final cacheKey = '$_moduleSettingsPrefix$moduleId';
-      final cachedData = _prefs.getString(cacheKey);
+      final cachedData = await _getCachedData<ModuleSettings>(
+        cacheKey,
+        (json) => ModuleSettings.fromJson(json),
+      );
       if (cachedData != null) {
-        try {
-          return ModuleSettings.fromJson(jsonDecode(cachedData) as Map<String, dynamic>);
-        } catch (e) {
-          debugPrint('Error decoding cached settings: $e');
-        }
+        return cachedData;
       }
-      
-      // Fetch from API
-      final response = await _dio.get('/api/modules/$moduleId/settings');
-      
+
+      final response = await _dio.get(
+        '/api/modules/$moduleId/settings',
+        cancelToken: cancelToken,
+      );
+
       if (response.statusCode == 200) {
-        final settings = ModuleSettings.fromJson(response.data as Map<String, dynamic>);
-        
-        // Cache the result
-        try {
-          await _prefs.setString(cacheKey, jsonEncode(settings.toJson()));
-        } catch (e) {
-          debugPrint('Error caching settings: $e');
-        }
-        
+        final settings = ModuleSettings.fromJson(response.data);
+        await _cacheData(cacheKey, settings);
         return settings;
       } else {
-        throw Exception('Failed to load settings: ${response.statusCode}');
+        throw DioException(
+          requestOptions:
+              RequestOptions(path: '/api/modules/$moduleId/settings'),
+          response: response,
+          error: 'Failed to load settings: ${response.statusCode}',
+        );
       }
+    } on DioException catch (e) {
+      debugPrint('Network error fetching settings: ${e.message}');
+      return const ModuleSettings(); // Return default settings on error
     } catch (e) {
       debugPrint('Error fetching settings: $e');
       return const ModuleSettings(); // Return default settings on error
     }
   }
 
-  // Update module settings
-  Future<ModuleSettings> updateModuleSettings(String moduleId, ModuleSettings settings) async {
+  Future<ModuleSettings> updateModuleSettings(
+    String moduleId,
+    ModuleSettings settings, {
+    CancelToken? cancelToken,
+  }) async {
     if (_useMockData) {
       await Future.delayed(const Duration(milliseconds: 800));
       return settings;
     }
-    
+
     try {
       final response = await _dio.put(
         '/api/modules/$moduleId/settings',
         data: settings.toJson(),
+        cancelToken: cancelToken,
       );
-      
+
       if (response.statusCode == 200) {
-        final updatedSettings = ModuleSettings.fromJson(response.data as Map<String, dynamic>);
-        
-        // Cache the result
-        final cacheKey = '$_moduleSettingsPrefix$moduleId';
-        try {
-          await _prefs.setString(cacheKey, jsonEncode(updatedSettings.toJson()));
-        } catch (e) {
-          debugPrint('Error caching settings: $e');
-        }
-        
+        final updatedSettings = ModuleSettings.fromJson(response.data);
+        final cacheKey = CacheKeys.moduleSettings(moduleId);
+        await _cacheData(cacheKey, updatedSettings);
         return updatedSettings;
       } else {
-        throw Exception('Failed to update settings: ${response.statusCode}');
+        throw DioException(
+          requestOptions:
+              RequestOptions(path: '/api/modules/$moduleId/settings'),
+          response: response,
+          error: 'Failed to update settings: ${response.statusCode}',
+        );
       }
+    } on DioException catch (e) {
+      debugPrint('Network error updating settings: ${e.message}');
+
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.sendTimeout) {
+        throw NetworkTimeoutException('Không thể kết nối đến máy chủ');
+      }
+
+      if (e.response?.statusCode == 403) {
+        throw PermissionException(
+            'Bạn không có quyền cập nhật cài đặt cho học phần này');
+      }
+
+      throw ModuleException('Không thể cập nhật cài đặt: ${e.message}');
     } catch (e) {
       debugPrint('Error updating settings: $e');
-      rethrow;
+      throw ModuleException('Đã xảy ra lỗi: $e');
     }
   }
 
-  // Helper method to update module in cache
+  // Cache methods
   Future<void> _updateModuleInCache(StudyModule module) async {
-    // Update detailed cache
-    final detailCacheKey = '$_moduleDetailPrefix${module.id}';
-    try {
-      await _prefs.setString(detailCacheKey, jsonEncode(module.toJson()));
-    } catch (e) {
-      debugPrint('Error updating module cache: $e');
-    }
-    
-    // Update list cache if exists
-    final moduleListCache = _prefs.getString(_moduleListKey);
+    final detailCacheKey = CacheKeys.moduleDetail(module.id);
+    await _cacheData(detailCacheKey, module);
+
+    final moduleListCache = _prefs.getString(CacheKeys.moduleList);
     if (moduleListCache != null) {
       try {
-        final List<dynamic> decoded = jsonDecode(moduleListCache) as List<dynamic>;
-        final modules = decoded.map((json) => StudyModule.fromJson(json)).toList();
-        
+        final List<dynamic> decoded =
+            jsonDecode(moduleListCache) as List<dynamic>;
+        final modules =
+            decoded.map((json) => StudyModule.fromJson(json)).toList();
+
         final index = modules.indexWhere((m) => m.id == module.id);
         if (index >= 0) {
           modules[index] = module;
         } else {
           modules.add(module);
         }
-        
-        await _prefs.setString(_moduleListKey, jsonEncode(modules.map((e) => e.toJson()).toList()));
+
+        await _cacheData(CacheKeys.moduleList, modules);
       } catch (e) {
         debugPrint('Error updating module list cache: $e');
       }
     }
   }
 
-  // Check if cache is still valid (less than 1 hour old)
-  bool _isCacheValid() {
-    final lastSyncStr = _prefs.getString(_lastSyncKey);
-    if (lastSyncStr == null) return false;
-    
+  Future<void> _removeFromCache(String moduleId) async {
+    final detailCacheKey = CacheKeys.moduleDetail(moduleId);
+    await _prefs.remove(detailCacheKey);
+    await _prefs.remove(CacheKeys.cacheExpiry(detailCacheKey));
+
+    final settingsCacheKey = CacheKeys.moduleSettings(moduleId);
+    await _prefs.remove(settingsCacheKey);
+    await _prefs.remove(CacheKeys.cacheExpiry(settingsCacheKey));
+
+    // Cập nhật danh sách
+    final moduleListCache = _prefs.getString(CacheKeys.moduleList);
+    if (moduleListCache != null) {
+      try {
+        final List<dynamic> decoded =
+            jsonDecode(moduleListCache) as List<dynamic>;
+        final modules = decoded
+            .map((json) => StudyModule.fromJson(json))
+            .where((module) => module.id != moduleId)
+            .toList();
+
+        await _cacheData(CacheKeys.moduleList, modules);
+      } catch (e) {
+        debugPrint('Error updating module list cache after deletion: $e');
+      }
+    }
+  }
+
+  Future<void> _cacheData<T>(String key, T data,
+      {int expiryHours = _defaultCacheExpiryHours}) async {
     try {
-      final lastSync = DateTime.parse(lastSyncStr);
-      final now = DateTime.now();
-      final difference = now.difference(lastSync);
-      
-      // Cache is valid if less than 1 hour old
-      return difference.inHours < 1;
+      String jsonData;
+      if (data is List<StudyModule>) {
+        jsonData = jsonEncode(data.map((e) => e.toJson()).toList());
+      } else if (data is StudyModule) {
+        jsonData = jsonEncode(data.toJson());
+      } else if (data is ModuleSettings) {
+        jsonData = jsonEncode(data.toJson());
+      } else {
+        throw ArgumentError(
+            'Unsupported type for caching: ${data.runtimeType}');
+      }
+
+      await _prefs.setString(key, jsonData);
+
+      final expiryTime = DateTime.now().add(Duration(hours: expiryHours));
+      await _prefs.setString(
+          CacheKeys.cacheExpiry(key), expiryTime.toIso8601String());
+      await _prefs.setString(
+          CacheKeys.lastSyncKey, DateTime.now().toIso8601String());
     } catch (e) {
-      debugPrint('Error parsing last sync date: $e');
+      debugPrint('Error caching data for key $key: $e');
+    }
+  }
+
+  Future<T?> _getCachedData<T>(
+      String key, T Function(dynamic json) fromJson) async {
+    try {
+      final cachedData = _prefs.getString(key);
+      if (cachedData == null) return null;
+      if (!_isCacheValid(key)) return null;
+
+      final dynamic decoded = jsonDecode(cachedData);
+      return fromJson(decoded);
+    } catch (e) {
+      debugPrint('Error retrieving cached data for key $key: $e');
+      return null;
+    }
+  }
+
+  bool _isCacheValid(String key) {
+    final expiryTimeStr = _prefs.getString(CacheKeys.cacheExpiry(key));
+    if (expiryTimeStr == null) return false;
+
+    try {
+      final expiryTime = DateTime.parse(expiryTimeStr);
+      return DateTime.now().isBefore(expiryTime);
+    } catch (e) {
+      debugPrint('Error parsing cache expiry time: $e');
       return false;
     }
   }
 
-  // Get mock data for development
+  // Mock data methods
   List<StudyModule> _getMockModules() {
     return [
       StudyModule(
         id: '1',
         title: 'Vitamin_Book2_Chapter4-2: Vocabulary',
-        description: 'Từ vựng Tiếng Hàn chương 4-2',
+        description: 'Korean vocabulary chapter 4-2',
         creatorName: 'giapnguyen1994',
         hasPlusBadge: true,
         termCount: 55,
@@ -405,7 +626,7 @@ class ModuleRepository {
       StudyModule(
         id: '2',
         title: 'Section 4: 병원',
-        description: 'Từ vựng về bệnh viện',
+        description: 'Hospital-related vocabulary',
         creatorName: 'giapnguyen1994',
         hasPlusBadge: true,
         termCount: 88,
@@ -415,7 +636,7 @@ class ModuleRepository {
       StudyModule(
         id: '3',
         title: 'Vitamin_Book2_Chapter1-1: Vocabulary',
-        description: 'Từ vựng Tiếng Hàn chương 1-1',
+        description: 'Korean vocabulary chapter 1-1',
         creatorName: 'giapnguyen1994',
         hasPlusBadge: false,
         termCount: 74,
@@ -424,8 +645,8 @@ class ModuleRepository {
       ),
       StudyModule(
         id: '4',
-        title: 'TOPIK I - Luyện nghe cấp độ 1-2',
-        description: 'Tài liệu luyện nghe thi TOPIK I',
+        title: 'TOPIK I - Listening Practice Level 1-2',
+        description: 'Listening practice materials for TOPIK I',
         creatorName: 'korean_teacher',
         hasPlusBadge: true,
         termCount: 120,
@@ -435,14 +656,13 @@ class ModuleRepository {
     ];
   }
 
-  // Get mock modules by folder
   List<StudyModule> _getMockModulesByFolder(String folderId) {
     return List.generate(
       4,
       (index) => StudyModule(
         id: 'folder-$folderId-module-${index + 1}',
-        title: 'Section ${index + 1}: Chủ đề ${index + 1}',
-        description: 'Mô tả cho học phần ${index + 1}',
+        title: 'Section ${index + 1}: Topic ${index + 1}',
+        description: 'Description for module ${index + 1}',
         creatorName: 'giapnguyen1994',
         hasPlusBadge: index % 2 == 0,
         termCount: 50 + index,
@@ -452,15 +672,14 @@ class ModuleRepository {
     );
   }
 
-  // Get a mock module by ID
   StudyModule _getMockModuleById(String id) {
     final allModules = _getMockModules();
-    final module = allModules.firstWhere(
+    return allModules.firstWhere(
       (module) => module.id == id,
       orElse: () => StudyModule(
         id: id,
         title: 'Vitamin_Book2_Chapter4-2: Vocabulary',
-        description: 'Từ vựng Tiếng Hàn chương 4-2',
+        description: 'Korean vocabulary chapter 4-2',
         creatorName: 'giapnguyen1994',
         hasPlusBadge: true,
         termCount: 55,
@@ -468,27 +687,43 @@ class ModuleRepository {
         createdAt: DateTime.now().subtract(const Duration(days: 5)),
       ),
     );
-    
-    return module;
   }
 
-  // Generate mock flashcards
   List<Flashcard> _generateMockFlashcards(int count) {
     final List<Flashcard> flashcards = [];
-    
     final List<Map<String, String>> koreanWords = [
-      {'term': '사과', 'definition': 'Quả táo', 'example': '나는 사과를 좋아해요.'},
-      {'term': '바나나', 'definition': 'Quả chuối', 'example': '바나나는 노란색이에요.'},
-      {'term': '오렌지', 'definition': 'Quả cam', 'example': '오렌지 주스를 마셔요.'},
-      {'term': '포도', 'definition': 'Quả nho', 'example': '포도는 달아요.'},
-      {'term': '딸기', 'definition': 'Quả dâu tây', 'example': '딸기가 맛있어요.'},
-      {'term': '수박', 'definition': 'Quả dưa hấu', 'example': '여름에 수박을 먹어요.'},
-      {'term': '파인애플', 'definition': 'Quả dứa', 'example': '파인애플은 노란색이에요.'},
-      {'term': '망고', 'definition': 'Quả xoài', 'example': '망고는 달고 맛있어요.'},
-      {'term': '키위', 'definition': 'Quả kiwi', 'example': '키위는 갈색이에요.'},
-      {'term': '복숭아', 'definition': 'Quả đào', 'example': '복숭아는 달아요.'},
+      {'term': '사과', 'definition': 'Apple', 'example': 'I like apples.'},
+      {'term': '바나나', 'definition': 'Banana', 'example': 'Bananas are yellow.'},
+      {
+        'term': '오렌지',
+        'definition': 'Orange',
+        'example': 'I drink orange juice.'
+      },
+      {'term': '포도', 'definition': 'Grape', 'example': 'Grapes are sweet.'},
+      {
+        'term': '딸기',
+        'definition': 'Strawberry',
+        'example': 'Strawberries are delicious.'
+      },
+      {
+        'term': '수박',
+        'definition': 'Watermelon',
+        'example': 'I eat watermelon in summer.'
+      },
+      {
+        'term': '파인애플',
+        'definition': 'Pineapple',
+        'example': 'Pineapples are yellow.'
+      },
+      {
+        'term': '망고',
+        'definition': 'Mango',
+        'example': 'Mangoes are sweet and delicious.'
+      },
+      {'term': '키위', 'definition': 'Kiwi', 'example': 'Kiwis are brown.'},
+      {'term': '복숭아', 'definition': 'Peach', 'example': 'Peaches are sweet.'},
     ];
-    
+
     for (int i = 0; i < count; i++) {
       final wordData = koreanWords[i % koreanWords.length];
       flashcards.add(
@@ -502,7 +737,7 @@ class ModuleRepository {
         ),
       );
     }
-    
+
     return flashcards;
   }
 }

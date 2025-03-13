@@ -1,8 +1,10 @@
+// C:/Users/ntgpt/OneDrive/workspace/qlz_flash_cards_ui/lib/features/module/screens/create_study_module_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
-import 'package:qlz_flash_cards_ui/features/module/data/repositories/module_repository.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 import 'package:qlz_flash_cards_ui/features/module/logic/cubit/create_module_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/module/logic/states/create_module_state.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/buttons/qlz_button.dart';
@@ -16,29 +18,85 @@ import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
 
 class CreateStudyModuleScreen extends StatefulWidget {
   const CreateStudyModuleScreen({super.key});
+
   @override
-  State<CreateStudyModuleScreen> createState() => _CreateStudyModuleScreenState();
+  State<CreateStudyModuleScreen> createState() =>
+      _CreateStudyModuleScreenState();
 }
 
 class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
   final _scrollController = ScrollController();
-  late CreateModuleCubit _cubit;
-  
+
+  // Quản lý TextEditingController với Maps
+  final Map<int, TextEditingController> _termControllers = {};
+  final Map<int, TextEditingController> _definitionControllers = {};
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
-    _cubit = CreateModuleCubit(context.read<ModuleRepository>());
+    // Lắng nghe thay đổi trong state để cập nhật controllers
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeControllers();
+    });
+  }
+
+  void _initializeControllers() {
+    final state = context.read<CreateModuleCubit>().state;
+    _titleController.text = state.title;
+    _descriptionController.text = state.description;
+
+    for (int i = 0; i < state.flashcards.length; i++) {
+      _getTermController(i, state.flashcards[i].term);
+      _getDefinitionController(i, state.flashcards[i].definition);
+    }
   }
 
   @override
   void dispose() {
     _scrollController.dispose();
-    _cubit.close();
+    _titleController.dispose();
+    _descriptionController.dispose();
+
+    // Giải phóng tất cả controllers
+    _termControllers.forEach((_, controller) => controller.dispose());
+    _definitionControllers.forEach((_, controller) => controller.dispose());
+
     super.dispose();
   }
 
+  // Lấy hoặc tạo TextEditingController cho term
+  TextEditingController _getTermController(int index, String initialText) {
+    if (!_termControllers.containsKey(index)) {
+      _termControllers[index] = TextEditingController(text: initialText);
+      _termControllers[index]!.addListener(() {
+        context
+            .read<CreateModuleCubit>()
+            .updateFlashcardTerm(index, _termControllers[index]!.text);
+      });
+    }
+    return _termControllers[index]!;
+  }
+
+  // Lấy hoặc tạo TextEditingController cho definition
+  TextEditingController _getDefinitionController(
+      int index, String initialText) {
+    if (!_definitionControllers.containsKey(index)) {
+      _definitionControllers[index] = TextEditingController(text: initialText);
+      _definitionControllers[index]!.addListener(() {
+        context.read<CreateModuleCubit>().updateFlashcardDefinition(
+            index, _definitionControllers[index]!.text);
+      });
+    }
+    return _definitionControllers[index]!;
+  }
+
   void _addNewCard() {
-    _cubit.addFlashcard();
+    HapticFeedback.selectionClick();
+    context.read<CreateModuleCubit>().addFlashcard();
+
+    // Scroll xuống sau khi thêm thẻ mới
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -50,9 +108,29 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
     });
   }
 
+  // Cập nhật controllers khi flashcards thay đổi
+  void _updateControllersFromState(List<Flashcard> flashcards) {
+    for (int i = 0; i < flashcards.length; i++) {
+      final flashcard = flashcards[i];
+
+      if (_termControllers.containsKey(i) &&
+          _termControllers[i]!.text != flashcard.term) {
+        _termControllers[i]!.text = flashcard.term;
+      }
+
+      if (_definitionControllers.containsKey(i) &&
+          _definitionControllers[i]!.text != flashcard.definition) {
+        _definitionControllers[i]!.text = flashcard.definition;
+      }
+    }
+  }
+
   Future<void> _handleSave() async {
-    final result = await _cubit.submitModule();
+    HapticFeedback.mediumImpact();
+
+    final result = await context.read<CreateModuleCubit>().submitModule();
     if (!mounted) return;
+
     if (result) {
       QlzSnackbar.success(
         context: context,
@@ -69,72 +147,77 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _cubit,
-      child: BlocBuilder<CreateModuleCubit, CreateModuleState>(
-        builder: (context, state) {
-          final isSubmitting = state.status == CreateModuleStatus.submitting;
-          return QlzScreen(
-            appBar: QlzAppBar(
-              title: 'Tạo học phần',
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.settings),
-                  onPressed: () => Navigator.pushNamed(
+    return BlocConsumer<CreateModuleCubit, CreateModuleState>(
+      listener: (context, state) {
+        // Cập nhật controllers khi state thay đổi
+        _updateControllersFromState(state.flashcards);
+      },
+      builder: (context, state) {
+        final isSubmitting = state.status == CreateModuleStatus.submitting;
+
+        return QlzScreen(
+          appBar: QlzAppBar(
+            title: 'Tạo học phần',
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.pushNamed(
                     context,
                     AppRoutes.moduleSettings,
+                  );
+                },
+              ),
+              isSubmitting
+                  ? const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      ),
+                    )
+                  : IconButton(
+                      icon: const Icon(Icons.check),
+                      onPressed: _handleSave,
+                    ),
+            ],
+          ),
+          child: isSubmitting
+              ? const Center(
+                  child: QlzLoadingState(
+                    message: 'Đang tạo học phần...',
+                    type: QlzLoadingType.circular,
+                  ),
+                )
+              : SingleChildScrollView(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const QlzLabel.muted('Chủ đề, chương, đơn vị'),
+                      const SizedBox(height: 16),
+                      _buildModuleInfoCard(state),
+                      _buildVocabularyCardsList(state),
+                      const SizedBox(height: 20),
+                      Center(
+                        child: QlzButton.secondary(
+                          label: 'Thêm thẻ',
+                          icon: Icons.add,
+                          onPressed: _addNewCard,
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                    ],
                   ),
                 ),
-                isSubmitting
-                    ? const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        ),
-                      )
-                    : IconButton(
-                        icon: const Icon(Icons.check),
-                        onPressed: _handleSave,
-                      ),
-              ],
-            ),
-            child: isSubmitting
-                ? const Center(
-                    child: QlzLoadingState(
-                      message: 'Đang tạo học phần...',
-                      type: QlzLoadingType.circular,
-                    ),
-                  )
-                : SingleChildScrollView(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const QlzLabel.muted('Chủ đề, chương, đơn vị'),
-                        const SizedBox(height: 16),
-                        _buildModuleInfoCard(state),
-                        _buildVocabularyCardsList(state),
-                        const SizedBox(height: 20),
-                        Center(
-                          child: QlzButton.secondary(
-                            label: 'Thêm thẻ',
-                            icon: Icons.add,
-                            onPressed: _addNewCard,
-                          ),
-                        ),
-                        const SizedBox(height: 40),
-                      ],
-                    ),
-                  ),
-          );
-        },
-      ),
+        );
+      },
     );
   }
 
@@ -152,14 +235,18 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
               QlzButton.secondary(
                 label: 'Quét tài liệu',
                 icon: Icons.document_scanner_outlined,
-                onPressed: () {},
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                },
                 size: QlzButtonSize.small,
               ),
               const SizedBox(width: 8),
               QlzButton.ghost(
                 label: 'Nhập',
                 icon: Icons.upload_file_outlined,
-                onPressed: () {},
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                },
                 size: QlzButtonSize.small,
               ),
             ],
@@ -168,7 +255,9 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
           QlzTextField(
             hintText: 'Học phần của bạn có chủ đề gì?',
             error: state.titleError,
-            onChanged: (value) => _cubit.updateTitle(value),
+            controller: _titleController,
+            onChanged: (value) =>
+                context.read<CreateModuleCubit>().updateTitle(value),
           ),
           const SizedBox(height: 20),
           const QlzLabel('MÔ TẢ'),
@@ -176,7 +265,9 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
           QlzTextField(
             hintText: 'Thêm mô tả...',
             isMultiline: true,
-            onChanged: (value) => _cubit.updateDescription(value),
+            controller: _descriptionController,
+            onChanged: (value) =>
+                context.read<CreateModuleCubit>().updateDescription(value),
           ),
         ],
       ),
@@ -188,13 +279,21 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: state.flashcards.length,
-      itemBuilder: (context, index) => _buildVocabularyCard(context, index, state),
+      itemBuilder: (context, index) =>
+          _buildVocabularyCard(context, index, state),
     );
   }
 
-  Widget _buildVocabularyCard(BuildContext context, int index, CreateModuleState state) {
+  Widget _buildVocabularyCard(
+      BuildContext context, int index, CreateModuleState state) {
     final isRequired = index < 2;
     final flashcard = state.flashcards[index];
+
+    // Sử dụng controller đã tạo
+    final termController = _getTermController(index, flashcard.term);
+    final definitionController =
+        _getDefinitionController(index, flashcard.definition);
+
     return QlzCard(
       padding: const EdgeInsets.all(20),
       margin: const EdgeInsets.only(bottom: 16),
@@ -214,7 +313,14 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
                     color: AppColors.error,
                     size: 20,
                   ),
-                  onPressed: () => _cubit.removeFlashcard(index),
+                  onPressed: () {
+                    HapticFeedback.mediumImpact();
+                    context.read<CreateModuleCubit>().removeFlashcard(index);
+
+                    // Xóa controllers khi xóa flashcard
+                    _termControllers.remove(index)?.dispose();
+                    _definitionControllers.remove(index)?.dispose();
+                  },
                   constraints: const BoxConstraints(
                     minWidth: 32,
                     minHeight: 32,
@@ -228,8 +334,7 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
           QlzTextField(
             hintText: 'Nhập thuật ngữ...',
             error: state.termErrors[index],
-            onChanged: (value) => _cubit.updateFlashcardTerm(index, value),
-            controller: TextEditingController(text: flashcard.term),
+            controller: termController,
           ),
           const SizedBox(height: 20),
           Row(
@@ -243,8 +348,7 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
             hintText: 'Nhập định nghĩa...',
             isMultiline: true,
             error: state.definitionErrors[index],
-            onChanged: (value) => _cubit.updateFlashcardDefinition(index, value),
-            controller: TextEditingController(text: flashcard.definition),
+            controller: definitionController,
           ),
           const SizedBox(height: 12),
           Row(
@@ -253,14 +357,18 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
               QlzButton.ghost(
                 label: 'Thêm ví dụ',
                 icon: Icons.add,
-                onPressed: () {},
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                },
                 size: QlzButtonSize.small,
               ),
               const SizedBox(width: 8),
               QlzButton.ghost(
                 label: 'Thêm hình ảnh',
                 icon: Icons.image_outlined,
-                onPressed: () {},
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                },
                 size: QlzButtonSize.small,
               ),
             ],

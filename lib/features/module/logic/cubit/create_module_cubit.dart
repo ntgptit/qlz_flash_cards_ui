@@ -1,120 +1,145 @@
-// lib/features/module/logic/cubit/create_module_cubit.dart
+// C:/Users/ntgpt/OneDrive/workspace/qlz_flash_cards_ui/lib/features/module/logic/cubit/create_module_cubit.dart
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
-
-import '../../data/models/module_settings_model.dart';
-import '../../data/models/study_module_model.dart';
-import '../../data/repositories/module_repository.dart';
-import '../states/create_module_state.dart';
+import 'package:qlz_flash_cards_ui/features/module/data/models/module_settings_model.dart';
+import 'package:qlz_flash_cards_ui/features/module/data/models/study_module_model.dart';
+import 'package:qlz_flash_cards_ui/features/module/data/repositories/module_repository.dart';
+import 'package:qlz_flash_cards_ui/features/module/logic/states/create_module_state.dart';
 
 class CreateModuleCubit extends Cubit<CreateModuleState> {
   final ModuleRepository _repository;
+  bool _isClosed = false;
 
-  CreateModuleCubit(this._repository) : super(CreateModuleState(
-    // Initialize with 2 empty flashcards
-    flashcards: [
-      Flashcard.empty(order: 0),
-      Flashcard.empty(order: 1),
-    ],
-  ));
+  CreateModuleCubit(this._repository)
+      : super(CreateModuleState(
+          flashcards: [
+            Flashcard.empty(order: 0),
+            Flashcard.empty(order: 1),
+          ],
+        ));
 
-  // Update title
+  @override
+  Future<void> close() {
+    _isClosed = true;
+    return super.close();
+  }
+
+  void _safeEmit(CreateModuleState newState) {
+    if (!_isClosed) {
+      emit(newState);
+    }
+  }
+
   void updateTitle(String title) {
-    emit(state.copyWith(
+    _safeEmit(state.copyWith(
       title: title,
       titleError: title.trim().isEmpty ? 'Vui lòng nhập tiêu đề' : null,
     ));
   }
 
-  // Update description
   void updateDescription(String description) {
-    emit(state.copyWith(description: description));
+    _safeEmit(state.copyWith(description: description));
   }
 
-  // Update flashcard term
   void updateFlashcardTerm(int index, String term) {
     final newFlashcards = List<Flashcard>.from(state.flashcards);
     if (index < newFlashcards.length) {
       newFlashcards[index] = newFlashcards[index].copyWith(term: term);
     }
 
-    // Update term errors
     final newTermErrors = Map<int, String?>.from(state.termErrors);
-    // Clear error if term is not empty
     if (term.trim().isNotEmpty) {
       newTermErrors.remove(index);
     }
 
-    emit(state.copyWith(
+    _safeEmit(state.copyWith(
       flashcards: newFlashcards,
       termErrors: newTermErrors,
     ));
   }
 
-  // Update flashcard definition
   void updateFlashcardDefinition(int index, String definition) {
     final newFlashcards = List<Flashcard>.from(state.flashcards);
     if (index < newFlashcards.length) {
-      newFlashcards[index] = newFlashcards[index].copyWith(definition: definition);
+      newFlashcards[index] =
+          newFlashcards[index].copyWith(definition: definition);
     }
 
-    // Update definition errors
     final newDefErrors = Map<int, String?>.from(state.definitionErrors);
-    // Clear error if definition is not empty
     if (definition.trim().isNotEmpty) {
       newDefErrors.remove(index);
     }
 
-    emit(state.copyWith(
+    _safeEmit(state.copyWith(
       flashcards: newFlashcards,
       definitionErrors: newDefErrors,
     ));
   }
 
-  // Add a new flashcard
   void addFlashcard() {
     final newFlashcards = List<Flashcard>.from(state.flashcards);
     newFlashcards.add(Flashcard.empty(order: newFlashcards.length));
-    emit(state.copyWith(flashcards: newFlashcards));
+    _safeEmit(state.copyWith(flashcards: newFlashcards));
   }
 
-  // Remove flashcard
   void removeFlashcard(int index) {
     if (index < 2) return; // Don't remove the first two required flashcards
-    
+
     final newFlashcards = List<Flashcard>.from(state.flashcards);
     if (index < newFlashcards.length) {
       newFlashcards.removeAt(index);
+
+      // Cập nhật lại order cho các flashcard sau khi xóa
+      for (int i = index; i < newFlashcards.length; i++) {
+        newFlashcards[i] = newFlashcards[i].copyWith(order: i);
+      }
     }
-    
-    // Update errors maps
+
     final newTermErrors = Map<int, String?>.from(state.termErrors);
     final newDefErrors = Map<int, String?>.from(state.definitionErrors);
+
+    // Xóa lỗi của flashcard bị xóa
     newTermErrors.remove(index);
     newDefErrors.remove(index);
-    
-    emit(state.copyWith(
+
+    // Cập nhật lại key cho các lỗi của flashcard sau index
+    for (int i = index + 1; i < state.flashcards.length; i++) {
+      if (newTermErrors.containsKey(i)) {
+        final error = newTermErrors.remove(i);
+        if (error != null) {
+          newTermErrors[i - 1] = error;
+        }
+      }
+
+      if (newDefErrors.containsKey(i)) {
+        final error = newDefErrors.remove(i);
+        if (error != null) {
+          newDefErrors[i - 1] = error;
+        }
+      }
+    }
+
+    _safeEmit(state.copyWith(
       flashcards: newFlashcards,
       termErrors: newTermErrors,
       definitionErrors: newDefErrors,
     ));
   }
 
-  // Validate form
   bool validateForm() {
     final title = state.title.trim();
     Map<int, String?> newTermErrors = {};
     Map<int, String?> newDefErrors = {};
     bool isValid = true;
-    
+
     if (title.isEmpty) {
-      emit(state.copyWith(titleError: 'Vui lòng nhập tiêu đề'));
+      _safeEmit(state.copyWith(titleError: 'Vui lòng nhập tiêu đề'));
       isValid = false;
     } else {
-      emit(state.copyWith(titleError: null));
+      _safeEmit(state.copyWith(titleError: null));
     }
-    
-    // First two flashcards are required
+
+    // Kiểm tra 2 flashcard đầu tiên (bắt buộc)
     for (int i = 0; i < 2; i++) {
       if (i < state.flashcards.length) {
         if (state.flashcards[i].term.trim().isEmpty) {
@@ -127,12 +152,13 @@ class CreateModuleCubit extends Cubit<CreateModuleState> {
         }
       }
     }
-    
-    // Optional flashcards - if one field is filled, the other must be too
+
+    // Kiểm tra các flashcard không bắt buộc
     for (int i = 2; i < state.flashcards.length; i++) {
       final term = state.flashcards[i].term.trim();
       final definition = state.flashcards[i].definition.trim();
-      
+
+      // Nếu có term nhưng không có definition hoặc ngược lại
       if (term.isNotEmpty && definition.isEmpty) {
         newDefErrors[i] = 'Vui lòng nhập định nghĩa';
         isValid = false;
@@ -141,32 +167,32 @@ class CreateModuleCubit extends Cubit<CreateModuleState> {
         isValid = false;
       }
     }
-    
-    emit(state.copyWith(
+
+    _safeEmit(state.copyWith(
       termErrors: newTermErrors,
       definitionErrors: newDefErrors,
     ));
-    
+
     return isValid;
   }
 
-  // Submit form to create module
   Future<bool> submitModule() async {
     if (!validateForm()) return false;
-    
-    emit(state.copyWith(status: CreateModuleStatus.submitting));
-    
+
+    _safeEmit(state.copyWith(status: CreateModuleStatus.submitting));
+
     try {
-      // Filter out empty flashcards
+      // Chỉ lấy các flashcard hợp lệ (có cả term và definition)
       final validFlashcards = state.flashcards.where((card) {
         return card.term.trim().isNotEmpty && card.definition.trim().isNotEmpty;
       }).toList();
-      
+
+      // Tạo StudyModule từ state hiện tại
       final module = StudyModule(
-        id: DateTime.now().millisecondsSinceEpoch.toString(), // Temporary ID
+        id: DateTime.now().millisecondsSinceEpoch.toString(), // ID tạm thời
         title: state.title,
         description: state.description,
-        creatorName: 'giapnguyen1994', // Should come from user profile
+        creatorName: 'giapnguyen1994', // Lấy từ user profile trong thực tế
         termCount: validFlashcards.length,
         flashcards: validFlashcards,
         createdAt: DateTime.now(),
@@ -176,25 +202,42 @@ class CreateModuleCubit extends Cubit<CreateModuleState> {
         isEditable: state.settings.editPermission == 'Mọi người',
         autoSuggest: state.settings.autoSuggest,
       );
-      
+
       final createdModule = await _repository.createStudyModule(module);
-      
-      emit(state.copyWith(
+
+      _safeEmit(state.copyWith(
         status: CreateModuleStatus.success,
       ));
-      
+
       return true;
-    } catch (e) {
-      emit(state.copyWith(
+    } on NetworkTimeoutException catch (e) {
+      _safeEmit(state.copyWith(
         status: CreateModuleStatus.failure,
-        errorMessage: e.toString(),
+        errorMessage: 'Không thể kết nối đến máy chủ: ${e.message}',
+      ));
+      return false;
+    } on PermissionException catch (e) {
+      _safeEmit(state.copyWith(
+        status: CreateModuleStatus.failure,
+        errorMessage: e.message,
+      ));
+      return false;
+    } on ModuleException catch (e) {
+      _safeEmit(state.copyWith(
+        status: CreateModuleStatus.failure,
+        errorMessage: e.message,
+      ));
+      return false;
+    } catch (e) {
+      _safeEmit(state.copyWith(
+        status: CreateModuleStatus.failure,
+        errorMessage: 'Đã xảy ra lỗi: $e',
       ));
       return false;
     }
   }
 
-  // Update module settings
   void updateSettings(ModuleSettings settings) {
-    emit(state.copyWith(settings: settings));
+    _safeEmit(state.copyWith(settings: settings));
   }
 }
