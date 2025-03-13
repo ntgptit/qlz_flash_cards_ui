@@ -56,6 +56,7 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
   bool _dialogShown = false;
   bool _isAutoPlayEnabled = false;
   Timer? _autoPlayTimer;
+  bool _isAutoSwiping = false;
 
   // Ghi nhớ flashcard hiện tại
   Flashcard? _currentFlashcard;
@@ -97,6 +98,9 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
   void _toggleAutoPlayMode(BuildContext context) {
     setState(() {
       _isAutoPlayEnabled = !_isAutoPlayEnabled;
+
+      // Khi bật chế độ tự động, đánh dấu biến _isAutoSwiping
+      _isAutoSwiping = _isAutoPlayEnabled;
     });
 
     if (_isAutoPlayEnabled) {
@@ -124,61 +128,23 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
     final flashcardId = state.currentFlashcard?.id ?? '';
     final controller = _getFlashcardController(flashcardId);
 
-    // Đầu tiên lật thẻ để xem định nghĩa (nếu đang ở mặt trước)
     if (controller.isShowingFront) {
+      // 1. Nếu đang ở mặt trước, lật thẻ để xem định nghĩa
       controller.flip();
 
-      // Đợi 5 giây để người dùng đọc định nghĩa
+      // 2. Đợi 5 giây để người dùng đọc định nghĩa
       _autoPlayTimer = Timer(const Duration(seconds: 5), () {
         if (!mounted || !_isAutoPlayEnabled) return;
 
-        // Lật lại mặt trước
-        controller.flip();
-
-        // Đợi lật xong
-        _autoPlayTimer = Timer(const Duration(milliseconds: 600), () {
-          if (!mounted || !_isAutoPlayEnabled) return;
-
-          // Kiểm tra nếu đây là thẻ cuối cùng
-          if (state.currentIndex < state.flashcards.length - 1) {
-            // Nếu chưa phải thẻ cuối, chuyển sang thẻ kế tiếp bằng swipe right (đã thuộc)
-            cubit.markAsLearned(); // Đánh dấu thẻ hiện tại là đã học
-            _cardSwiperController.swipe(CardSwiperDirection.right);
-
-            // Đợi animation chuyển thẻ hoàn tất
-            _autoPlayTimer = Timer(const Duration(seconds: 1), () {
-              if (mounted && _isAutoPlayEnabled) {
-                // Tiếp tục chuỗi với thẻ mới
-                _runAutoPlaySequence(context);
-              }
-            });
-          } else {
-            // Nếu là thẻ cuối cùng
-            _stopAutoPlayMode();
-            if (!_dialogShown) {
-              _showCompletionDialog(context);
-            }
-          }
-        });
-      });
-    } else {
-      // Nếu đang ở mặt sau, lật về mặt trước trước khi chuyển
-      controller.flip();
-
-      // Đợi lật xong
-      _autoPlayTimer = Timer(const Duration(milliseconds: 600), () {
-        if (!mounted || !_isAutoPlayEnabled) return;
-
-        // Kiểm tra nếu đây là thẻ cuối cùng
+        // 3. Kiểm tra nếu đây là thẻ cuối cùng
         if (state.currentIndex < state.flashcards.length - 1) {
-          // Nếu chưa phải thẻ cuối, chuyển sang thẻ kế tiếp
-          cubit.markAsLearned(); // Đánh dấu thẻ hiện tại là đã học
+          // 4. Nếu chưa phải thẻ cuối, chuyển sang thẻ kế tiếp (KHÔNG đánh dấu điểm)
           _cardSwiperController.swipe(CardSwiperDirection.right);
 
-          // Đợi animation chuyển thẻ hoàn tất
+          // 5. Đợi animation chuyển thẻ hoàn tất
           _autoPlayTimer = Timer(const Duration(seconds: 1), () {
             if (mounted && _isAutoPlayEnabled) {
-              // Tiếp tục chuỗi với thẻ mới
+              // 6. Tiếp tục chuỗi với thẻ mới
               _runAutoPlaySequence(context);
             }
           });
@@ -190,6 +156,25 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
           }
         }
       });
+    } else {
+      // Nếu đang ở mặt sau, chuyển thẻ luôn (không cần lật về mặt trước)
+      if (state.currentIndex < state.flashcards.length - 1) {
+        // Chuyển sang thẻ tiếp theo (KHÔNG đánh dấu điểm)
+        _cardSwiperController.swipe(CardSwiperDirection.right);
+
+        // Đợi animation chuyển thẻ hoàn tất
+        _autoPlayTimer = Timer(const Duration(seconds: 1), () {
+          if (mounted && _isAutoPlayEnabled) {
+            _runAutoPlaySequence(context);
+          }
+        });
+      } else {
+        // Nếu là thẻ cuối cùng
+        _stopAutoPlayMode();
+        if (!_dialogShown) {
+          _showCompletionDialog(context);
+        }
+      }
     }
   }
 
@@ -304,6 +289,7 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
         child: Column(
           children: [
             // Counters for learned/not learned terms
+            const SizedBox(height: 10),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
@@ -338,12 +324,14 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
                           ? const AllowedSwipeDirection.none()
                           : const AllowedSwipeDirection.all(),
                       onSwipe: (previousIndex, currentIndex, direction) {
-                        if (direction == CardSwiperDirection.left) {
-                          // Vuốt trái - đánh dấu đang học (chưa thuộc)
-                          context.read<FlashcardCubit>().markAsNotLearned();
-                        } else if (direction == CardSwiperDirection.right) {
-                          // Vuốt phải - đánh dấu đã thuộc
-                          context.read<FlashcardCubit>().markAsLearned();
+                        if (!_isAutoSwiping) {
+                          if (direction == CardSwiperDirection.left) {
+                            // Vuốt trái - đánh dấu đang học (chưa thuộc)
+                            context.read<FlashcardCubit>().markAsNotLearned();
+                          } else if (direction == CardSwiperDirection.right) {
+                            // Vuốt phải - đánh dấu đã thuộc
+                            context.read<FlashcardCubit>().markAsLearned();
+                          }
                         }
 
                         // Cập nhật index hiện tại
@@ -377,12 +365,14 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
                         if (percentThresholdX.abs() > 0.1) {
                           // Giới hạn giá trị opacity từ 0.0 đến 1.0
                           opacity =
-                              (percentThresholdX.abs() * 0.5).clamp(0.0, 1.0);
+                              (1.0 - percentThresholdX.abs()).clamp(0.3, 1.0);
 
                           if (percentThresholdX > 0) {
                             // Vuốt phải - đã thuộc (màu xanh)
-                            overlayColor = Colors.green;
-                            overlayIcon = Icons.check;
+                            if (!_isAutoSwiping) {
+                              overlayColor = Colors.green;
+                              overlayIcon = Icons.check;
+                            }
                           } else {
                             // Vuốt trái - đang học (màu cam)
                             overlayColor = Colors.orange;
@@ -419,25 +409,6 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
                     ),
             ),
 
-            // Swipe guidance text
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Column(
-                children: [
-                  const Text(
-                    'Chạm vào thẻ để lật',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Vuốt phải: Đã biết | Vuốt trái: Đang học',
-                    style: TextStyle(
-                        color: Colors.white.withOpacity(0.7), fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-
             // Navigation buttons
             Padding(
               padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
@@ -457,6 +428,25 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
                           },
                     tooltip: 'Quay lại',
                     isDisabled: _isAutoPlayEnabled || state.currentIndex == 0,
+                  ),
+                  // Swipe guidance text
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Chạm vào thẻ để lật',
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Vuốt phải: Đã biết | Vuốt trái: Đang học',
+                          style: TextStyle(
+                              color: Colors.white.withOpacity(0.7),
+                              fontSize: 14),
+                        ),
+                      ],
+                    ),
                   ),
                   _buildActionButton(
                     icon: _isAutoPlayEnabled ? Icons.pause : Icons.play_arrow,

@@ -152,37 +152,42 @@ class _QlzFlashcardState extends State<QlzFlashcard>
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return InkWell(
       onTap: _controller.isAnimating ? null : _flip,
       borderRadius: BorderRadius.circular(16),
-      child: AnimatedBuilder(
-        animation: _animation,
-        builder: (context, child) {
-          final transform = Matrix4.identity()
-            ..setEntry(3, 2, 0.001)
-            ..rotateY(_animation.value);
+      child: SizedBox(
+        // Đặt kích thước cố định cho container chứa thẻ
+        width: double.infinity, // Đảm bảo chiều rộng đầy đủ
+        child: AnimatedBuilder(
+          animation: _animation,
+          builder: (context, child) {
+            final transform = Matrix4.identity()
+              ..setEntry(3, 2, 0.001)
+              ..rotateY(_animation.value);
 
-          return Transform(
-            transform: transform,
-            alignment: Alignment.center,
-            child: Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(
-                  color: widget.isDifficult
-                      ? theme.colorScheme.error
-                      : Colors.transparent,
+            return Transform(
+              transform: transform,
+              alignment: Alignment.center,
+              child: Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: widget.isDifficult
+                        ? theme.colorScheme.error
+                        : Colors.transparent,
+                  ),
                 ),
+                child: _side == QlzFlashcardSide.front
+                    ? _buildFrontSide(theme)
+                    : _buildBackSide(theme),
               ),
-              child: _side == QlzFlashcardSide.front
-                  ? _buildFrontSide(theme)
-                  : _buildBackSide(theme),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -191,7 +196,7 @@ class _QlzFlashcardState extends State<QlzFlashcard>
     return Stack(
       children: [
         Container(
-          constraints: const BoxConstraints(minHeight: 200, maxHeight: 400),
+          constraints: const BoxConstraints(minHeight: 200, maxHeight: 450),
           padding: const EdgeInsets.all(24),
           child: Center(
             child: Column(
@@ -256,7 +261,7 @@ class _QlzFlashcardState extends State<QlzFlashcard>
 
   Widget _buildBackSide(ThemeData theme) {
     return Container(
-      constraints: const BoxConstraints(minHeight: 200, maxHeight: 400),
+      constraints: const BoxConstraints(minHeight: 200, maxHeight: 450),
       padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
