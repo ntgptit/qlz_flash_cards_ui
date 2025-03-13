@@ -27,10 +27,25 @@ class StreakCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Fail Fast: Kiểm tra dữ liệu đầu vào không hợp lệ
+    if (currentStreak < 0 ||
+        longestStreak < 0 ||
+        currentStreak > longestStreak) {
+      return const QlzCard(
+        backgroundColor: AppColors.darkCard,
+        padding: EdgeInsets.all(16),
+        margin: EdgeInsets.all(16), // Chuẩn hóa margin thành 16
+        child: Text(
+          'Dữ liệu chuỗi ngày không hợp lệ',
+          style: TextStyle(color: AppColors.error),
+        ),
+      );
+    }
+
     return QlzCard(
       backgroundColor: AppColors.darkCard,
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16), // Chuẩn 16
+      margin: const EdgeInsets.all(16), // Chuẩn hóa margin thành 16
       onTap: onTap,
       child: Column(
         children: [
@@ -112,26 +127,26 @@ class StreakCard extends StatelessWidget {
   }
 
   Widget _buildStreakInfo(
-    BuildContext context,
-    String label,
-    String value,
-    Color color,
-  ) {
+      BuildContext context, String label, String value, Color color) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.darkTextSecondary,
+                color: AppColors.darkTextSecondary
+                    .withOpacity(0.85), // Tăng độ sáng
+                fontSize: 14, // Chuẩn 14sp
               ),
         ),
         const SizedBox(height: 4),
         Text(
           value,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                // Từ titleLarge xuống titleMedium
                 fontWeight: FontWeight.bold,
                 color: color,
+                fontSize: 18, // Giảm từ 20 xuống 18
               ),
         ),
       ],
@@ -157,47 +172,91 @@ class StreakCard extends StatelessWidget {
           isActive = currentStreak > (now.weekday - 1 - index);
         }
 
-        return _buildDayDot(
-          context,
-          weekDays[dayOfWeek],
-          isActive,
-          isToday,
-        );
+        return _buildDayDot(context, weekDays[dayOfWeek], isActive, isToday);
       }),
     );
   }
 
   Widget _buildDayDot(
-    BuildContext context,
-    String day,
-    bool isActive,
-    bool isToday,
-  ) {
+      BuildContext context, String day, bool isActive, bool isToday) {
+    if (isActive) {
+      return Column(
+        children: [
+          Container(
+            width: 28, // Giảm từ 32 xuống 28
+            height: 28,
+            decoration: const BoxDecoration(
+              color: AppColors.success,
+              shape: BoxShape.circle,
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.check,
+                color: AppColors.darkText,
+                size: 14, // Giảm từ 16 xuống 14
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            day,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: isToday
+                      ? AppColors.darkText
+                      : AppColors.darkTextSecondary.withOpacity(0.85),
+                  fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 12, // Chuẩn 12sp
+                ),
+          ),
+        ],
+      );
+    }
+    if (isToday) {
+      return Column(
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: AppColors.warning.withOpacity(0.3),
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.warning, width: 2),
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.close,
+                color: AppColors.warning,
+                size: 14, // Giảm từ 16 xuống 14
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            day,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.darkText,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12, // Chuẩn 12sp
+                ),
+          ),
+        ],
+      );
+    }
     return Column(
       children: [
         Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: isActive
-                ? AppColors.success
-                : isToday
-                    ? AppColors.warning.withOpacity(0.3)
-                    : AppColors.darkSurface,
+          width: 28,
+          height: 28,
+          decoration: const BoxDecoration(
+            color: AppColors.darkSurface,
             shape: BoxShape.circle,
-            border: isToday && !isActive
-                ? Border.all(color: AppColors.warning, width: 2)
-                : null,
           ),
           child: Center(
             child: Icon(
-              isActive ? Icons.check : Icons.close,
-              color: isActive
-                  ? AppColors.darkText
-                  : isToday
-                      ? AppColors.warning
-                      : AppColors.darkTextSecondary.withOpacity(0.5),
-              size: 16,
+              Icons.close,
+              color: AppColors.darkTextSecondary
+                  .withOpacity(0.7), // Tăng từ 0.5 lên 0.7
+              size: 14, // Giảm từ 16 xuống 14
             ),
           ),
         ),
@@ -205,9 +264,10 @@ class StreakCard extends StatelessWidget {
         Text(
           day,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color:
-                    isToday ? AppColors.darkText : AppColors.darkTextSecondary,
-                fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                color: AppColors.darkTextSecondary
+                    .withOpacity(0.85), // Tăng độ sáng
+                fontWeight: FontWeight.normal,
+                fontSize: 12, // Chuẩn 12sp
               ),
         ),
       ],

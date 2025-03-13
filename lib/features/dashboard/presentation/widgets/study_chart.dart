@@ -32,10 +32,28 @@ class StudyActivityChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (timePeriod <= 0 || !periodOptions.contains(timePeriod)) {
+      return const QlzCard(
+        backgroundColor: AppColors.darkCard,
+        padding: EdgeInsets.all(16),
+        margin: EdgeInsets.all(16),
+        child: Text('Khoảng thời gian không hợp lệ',
+            style: TextStyle(color: AppColors.error)),
+      );
+    }
+    if (dailyStudyTime.isEmpty && dailyTermsLearned.isEmpty) {
+      return const QlzCard(
+        backgroundColor: AppColors.darkCard,
+        padding: EdgeInsets.all(16),
+        margin: EdgeInsets.all(16),
+        child: Text('Chưa có dữ liệu hoạt động',
+            style: TextStyle(color: AppColors.darkText)),
+      );
+    }
     return QlzCard(
       backgroundColor: AppColors.darkCard,
       padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -47,6 +65,7 @@ class StudyActivityChart extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: AppColors.darkText,
                       fontWeight: FontWeight.bold,
+                      fontSize: 16, // Chuẩn 16sp
                     ),
               ),
               _buildPeriodDropdown(context),
@@ -54,7 +73,7 @@ class StudyActivityChart extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           SizedBox(
-            height: 200,
+            height: 220, // Tăng từ 200 lên 220
             child: _buildChart(context),
           ),
           const SizedBox(height: 16),
@@ -104,7 +123,6 @@ class StudyActivityChart extends StatelessWidget {
               default:
                 label = '$value ngày';
             }
-
             return DropdownMenuItem<int>(
               value: value,
               child: Text(label),
@@ -121,19 +139,12 @@ class StudyActivityChart extends StatelessWidget {
         ? sortedDates.sublist(sortedDates.length - timePeriod)
         : sortedDates;
 
-    int maxStudyTime = 0;
-    int maxTermsLearned = 0;
-
-    for (final date in displayDates) {
-      final studyTime = dailyStudyTime[date] ?? 0;
-      final termsLearned = dailyTermsLearned[date] ?? 0;
-      maxStudyTime = studyTime > maxStudyTime ? studyTime : maxStudyTime;
-      maxTermsLearned =
-          termsLearned > maxTermsLearned ? termsLearned : maxTermsLearned;
-    }
-
-    maxStudyTime = maxStudyTime > 0 ? maxStudyTime : 3600;
-    maxTermsLearned = maxTermsLearned > 0 ? maxTermsLearned : 20;
+    final maxStudyTime = dailyStudyTime.values.isEmpty
+        ? 3600
+        : dailyStudyTime.values.reduce((a, b) => a > b ? a : b);
+    final maxTermsLearned = dailyTermsLearned.values.isEmpty
+        ? 20
+        : dailyTermsLearned.values.reduce((a, b) => a > b ? a : b);
 
     return Row(
       children: [
@@ -207,7 +218,6 @@ class StudyActivityChart extends StatelessWidget {
           ? '${(value / 3600).toStringAsFixed(1)}h'
           : '${(value / 60).round()}m';
     });
-
     return SizedBox(
       width: 40,
       child: Column(
@@ -217,7 +227,9 @@ class StudyActivityChart extends StatelessWidget {
           return Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.darkTextSecondary,
+                  color: AppColors.darkTextSecondary
+                      .withOpacity(0.85), // Tăng độ sáng
+                  fontSize: 13, // Tăng từ 12 lên 13
                 ),
           );
         }).toList(),
@@ -247,13 +259,8 @@ class StudyActivityChart extends StatelessWidget {
     );
   }
 
-  Widget _buildBarGroup(
-    BuildContext context,
-    double studyTimeHeight,
-    double termsLearnedHeight,
-    int studyTimeValue,
-    int termsLearnedValue,
-  ) {
+  Widget _buildBarGroup(BuildContext context, double studyTimeHeight,
+      double termsLearnedHeight, int studyTimeValue, int termsLearnedValue) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -265,25 +272,25 @@ class StudyActivityChart extends StatelessWidget {
                 message: _formatTime(studyTimeValue),
                 textStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.darkText,
+                      fontSize: 13, // Chuẩn 13sp
                     ),
                 decoration: BoxDecoration(
-                  color: AppColors.darkSurface,
+                  color: AppColors.darkSurface.withOpacity(0.9), // Tăng opacity
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Container(
                   height: height > 2 ? height : (studyTimeValue > 0 ? 2 : 0),
                   decoration: const BoxDecoration(
                     color: AppColors.primary,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(4),
-                    ),
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(4)),
                   ),
                 ),
               );
             },
           ),
         ),
-        const SizedBox(width: 1),
+        const SizedBox(width: 1), // Giảm từ 2 xuống 1
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -292,18 +299,18 @@ class StudyActivityChart extends StatelessWidget {
                 message: '$termsLearnedValue từ',
                 textStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.darkText,
+                      fontSize: 13, // Chuẩn 13sp
                     ),
                 decoration: BoxDecoration(
-                  color: AppColors.darkSurface,
+                  color: AppColors.darkSurface.withOpacity(0.9), // Tăng opacity
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Container(
                   height: height > 2 ? height : (termsLearnedValue > 0 ? 2 : 0),
                   decoration: const BoxDecoration(
                     color: AppColors.success,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(4),
-                    ),
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(4)),
                   ),
                 ),
               );
@@ -348,14 +355,10 @@ class StudyActivityChart extends StatelessWidget {
   }
 
   String _formatTime(int seconds) {
-    if (seconds < 60) {
-      return '$seconds giây';
-    } else if (seconds < 3600) {
-      return '${(seconds / 60).round()} phút';
-    } else {
-      final hours = seconds ~/ 3600;
-      final minutes = (seconds % 3600) ~/ 60;
-      return '$hours giờ ${minutes > 0 ? '$minutes phút' : ''}';
-    }
+    if (seconds < 60) return '$seconds giây';
+    if (seconds < 3600) return '${(seconds / 60).round()} phút';
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    return '$hours giờ ${minutes > 0 ? '$minutes phút' : ''}';
   }
 }

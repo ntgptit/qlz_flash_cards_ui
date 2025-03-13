@@ -1,66 +1,34 @@
-// lib/shared/widgets/inputs/qlz_icon_button.dart
-
 import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 
 /// Icon button variants for different visual styles
 enum QlzIconButtonVariant {
-  /// Primary color filled background
   primary,
-
-  /// Secondary color filled background
   secondary,
-
-  /// Transparent background with border
   outlined,
-
-  /// Completely transparent background
   ghost,
-
-  /// Error/danger color filled background
   danger,
 }
 
 /// Size options for icon buttons
 enum QlzIconButtonSize {
-  /// Small icon button (32x32)
   small,
-
-  /// Medium icon button (40x40)
   medium,
-
-  /// Large icon button (48x48)
   large,
 }
 
 /// A customized icon button component for the application that supports
 /// different variants, sizes, and states.
 final class QlzIconButton extends StatelessWidget {
-  /// The icon to display
   final IconData icon;
-
-  /// Optional callback when the button is pressed
   final VoidCallback? onPressed;
-
-  /// Button style variant
   final QlzIconButtonVariant variant;
-
-  /// Button size
   final QlzIconButtonSize size;
-
-  /// Whether the button is in a loading state
   final bool isLoading;
-
-  /// Optional tooltip text
   final String? tooltip;
-
-  /// Whether the button is disabled
   final bool isDisabled;
-
-  /// Badge count to display (if greater than 0)
   final int badgeCount;
 
-  /// Create a custom icon button with various styling options
   const QlzIconButton({
     super.key,
     required this.icon,
@@ -73,7 +41,6 @@ final class QlzIconButton extends StatelessWidget {
     this.badgeCount = 0,
   });
 
-  /// Convenience constructor for a primary filled icon button
   const QlzIconButton.primary({
     super.key,
     required this.icon,
@@ -85,7 +52,6 @@ final class QlzIconButton extends StatelessWidget {
     this.badgeCount = 0,
   }) : variant = QlzIconButtonVariant.primary;
 
-  /// Convenience constructor for a secondary filled icon button
   const QlzIconButton.secondary({
     super.key,
     required this.icon,
@@ -97,7 +63,6 @@ final class QlzIconButton extends StatelessWidget {
     this.badgeCount = 0,
   }) : variant = QlzIconButtonVariant.secondary;
 
-  /// Convenience constructor for an outlined icon button
   const QlzIconButton.outlined({
     super.key,
     required this.icon,
@@ -109,7 +74,6 @@ final class QlzIconButton extends StatelessWidget {
     this.badgeCount = 0,
   }) : variant = QlzIconButtonVariant.outlined;
 
-  /// Convenience constructor for a ghost (transparent) icon button
   const QlzIconButton.ghost({
     super.key,
     required this.icon,
@@ -121,7 +85,6 @@ final class QlzIconButton extends StatelessWidget {
     this.badgeCount = 0,
   }) : variant = QlzIconButtonVariant.ghost;
 
-  /// Convenience constructor for a danger/error icon button
   const QlzIconButton.danger({
     super.key,
     required this.icon,
@@ -135,14 +98,12 @@ final class QlzIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Define core properties
     final double buttonSize = _getButtonSize();
     final Color backgroundColor = _getBackgroundColor();
     final Color iconColor = _getIconColor();
     final double iconSize = _getIconSize();
     final BorderSide borderSide = _getBorderSide();
 
-    // Create the button widget
     Widget button = Material(
       color: backgroundColor,
       shape: RoundedRectangleBorder(
@@ -177,14 +138,8 @@ final class QlzIconButton extends StatelessWidget {
 
     // Wrap with badge if needed
     if (badgeCount > 0) {
-      button = Badge(
-        label: Text(
-          badgeCount > 99 ? '99+' : badgeCount.toString(),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 10,
-          ),
-        ),
+      button = Badge.count(
+        count: badgeCount,
         backgroundColor: AppColors.error,
         child: button,
       );
@@ -198,10 +153,13 @@ final class QlzIconButton extends StatelessWidget {
       );
     }
 
-    // Apply opacity if disabled
+    // Apply disabled effect using ColorFiltered
     if (isDisabled && !isLoading) {
-      button = Opacity(
-        opacity: 0.5,
+      button = ColorFiltered(
+        colorFilter: ColorFilter.mode(
+          Colors.grey.withOpacity(0.5),
+          BlendMode.saturation,
+        ),
         child: button,
       );
     }
@@ -224,19 +182,13 @@ final class QlzIconButton extends StatelessWidget {
       };
 
   /// Get the background color based on the variant
-  Color _getBackgroundColor() {
-    // Base opacity for the background
-    final double opacity = variant == QlzIconButtonVariant.ghost ? 0.0 : 0.1;
-
-    return switch (variant) {
-      QlzIconButtonVariant.primary => AppColors.primary.withOpacity(opacity),
-      QlzIconButtonVariant.secondary =>
-        AppColors.secondary.withOpacity(opacity),
-      QlzIconButtonVariant.outlined => Colors.transparent,
-      QlzIconButtonVariant.ghost => Colors.transparent,
-      QlzIconButtonVariant.danger => AppColors.error.withOpacity(opacity),
-    };
-  }
+  Color _getBackgroundColor() => switch (variant) {
+        QlzIconButtonVariant.primary => AppColors.primary.withOpacity(0.1),
+        QlzIconButtonVariant.secondary => AppColors.secondary.withOpacity(0.1),
+        QlzIconButtonVariant.outlined => Colors.transparent,
+        QlzIconButtonVariant.ghost => Colors.transparent,
+        QlzIconButtonVariant.danger => AppColors.error.withOpacity(0.1),
+      };
 
   /// Get the icon color based on the variant
   Color _getIconColor() => switch (variant) {

@@ -8,69 +8,29 @@ final class WelcomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Sử dụng MediaQuery để responsive
-    final screenSize = MediaQuery.of(context).size;
-    final isSmallScreen = screenSize.height < 600;
+    final bool smallScreen = isSmallScreen(context);
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight:
-                  screenSize.height - MediaQuery.of(context).padding.vertical,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Avatar container with semantics for accessibility
-                  Semantics(
-                    label: 'Profile image',
-                    image: true,
-                    child: Container(
-                      width: isSmallScreen ? 100 : 120,
-                      height: isSmallScreen ? 100 : 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.darkBorder,
-                          width: 2,
-                        ),
-                        image: const DecorationImage(
-                          image: AssetImage('assets/images/auth_avatar.jpg'),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: isSmallScreen ? 24 : 32),
-                  Text(
-                    'Cách tốt nhất để học. Đăng ký miễn phí.',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: AppColors.darkText,
-                          fontWeight: FontWeight.bold,
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Bằng việc đăng ký, bạn chấp nhận Điều khoản dịch vụ và Chính sách quyền riêng tư của Quizlet',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.darkTextSecondary,
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: isSmallScreen ? 32 : 40),
-                  _buildGoogleButton(context),
-                  const SizedBox(height: 16),
-                  _buildEmailButton(context),
-                  const SizedBox(height: 32),
-                  _buildSignInLink(context),
-                ],
-              ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildAvatar(smallScreen),
+                SizedBox(height: smallScreen ? 24 : 32),
+                _buildTitleText(context),
+                const SizedBox(height: 12),
+                _buildSubtitleText(context),
+                SizedBox(height: smallScreen ? 32 : 40),
+                _buildGoogleButton(context),
+                const SizedBox(height: 16),
+                _buildEmailButton(context),
+                const SizedBox(height: 32),
+                _buildSignInLink(context),
+              ],
             ),
           ),
         ),
@@ -78,34 +38,98 @@ final class WelcomeScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildAvatar(bool smallScreen) {
+    return Semantics(
+      label: 'Profile image',
+      image: true,
+      child: Container(
+        width: smallScreen ? 100 : 120,
+        height: smallScreen ? 100 : 120,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: AppColors.darkBorder,
+            width: 2,
+          ),
+          image: const DecorationImage(
+            image: AssetImage('assets/images/auth_avatar.jpg'),
+            fit: BoxFit.cover,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTitleText(BuildContext context) {
+    return Text(
+      'Cách tốt nhất để học. Đăng ký miễn phí.',
+      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: AppColors.darkText,
+            fontWeight: FontWeight.bold,
+          ),
+      textAlign: TextAlign.center,
+    );
+  }
+
+  Widget _buildSubtitleText(BuildContext context) {
+    return Text(
+      'Bằng việc đăng ký, bạn chấp nhận Điều khoản dịch vụ và Chính sách quyền riêng tư của Quizlet',
+      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: AppColors.darkTextSecondary,
+          ),
+      textAlign: TextAlign.center,
+    );
+  }
+
   Widget _buildGoogleButton(BuildContext context) {
-    return QlzButton(
+    return _buildAuthButton(
+      context,
       label: 'Tiếp tục với Google',
-      imageAssetPath: 'assets/icons/google_icon.png',
-      imageSize: 24,
-      onPressed: () {
-        // Implement Google sign-in
-        Navigator.of(context).pushReplacementNamed(AppRoutes.home);
-      },
-      isFullWidth: true,
-      variant: QlzButtonVariant.primary,
-      size: QlzButtonSize.large,
-      backgroundColor: AppColors.darkCard,
-      foregroundColor: AppColors.darkText,
-      borderColor: AppColors.darkBorder,
+      icon: null,
+      imagePath: 'assets/icons/google_icon.png',
+      onPressed: () =>
+          Navigator.of(context).pushReplacementNamed(AppRoutes.home),
+      backgroundColor: AppColors.darkCard, // Màu nền trung tính
+      foregroundColor: AppColors.darkText, // Màu chữ phù hợp
+      borderColor: AppColors.darkBorder.withOpacity(0.5), // Viền nhẹ
     );
   }
 
   Widget _buildEmailButton(BuildContext context) {
-    return QlzButton.secondary(
+    return _buildAuthButton(
+      context,
       label: 'Đăng ký bằng email',
       icon: Icons.email_outlined,
+      imagePath: null,
       onPressed: () => Navigator.pushNamed(context, AppRoutes.register),
+      backgroundColor: AppColors.primary, // Màu chủ đạo, làm nổi bật
+      foregroundColor: Colors.white, // Chữ trắng cho dễ đọc
+      borderColor: AppColors.primary, // Viền cùng màu nền
+    );
+  }
+
+  Widget _buildAuthButton(
+    BuildContext context, {
+    required String label,
+    IconData? icon,
+    String? imagePath,
+    required VoidCallback onPressed,
+    required Color backgroundColor,
+    required Color foregroundColor,
+    required Color borderColor,
+  }) {
+    return QlzButton(
+      label: label,
+      icon: icon,
+      imageAssetPath: imagePath,
+      imageSize: 24,
+      onPressed: onPressed,
       isFullWidth: true,
+      variant: QlzButtonVariant.primary,
       size: QlzButtonSize.large,
-      backgroundColor: AppColors.darkSurface,
-      foregroundColor: AppColors.primary,
-      borderColor: AppColors.primary.withOpacity(0.5),
+      backgroundColor: backgroundColor,
+      foregroundColor: foregroundColor,
+      borderColor: borderColor,
     );
   }
 
@@ -132,5 +156,9 @@ final class WelcomeScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  bool isSmallScreen(BuildContext context) {
+    return MediaQuery.sizeOf(context).height < 600;
   }
 }

@@ -23,6 +23,7 @@ final class QlzButton extends StatelessWidget {
   final Color? backgroundColor;
   final Color? foregroundColor;
   final Color? borderColor;
+  final EdgeInsets? padding; // Thêm tham số padding tùy chọn
 
   const QlzButton({
     super.key,
@@ -39,9 +40,9 @@ final class QlzButton extends StatelessWidget {
     this.backgroundColor,
     this.foregroundColor,
     this.borderColor,
+    this.padding, // Thêm vào constructor chính
   });
 
-  /// Constructor tiện lợi cho Primary Button
   const QlzButton.primary({
     super.key,
     required this.label,
@@ -56,9 +57,9 @@ final class QlzButton extends StatelessWidget {
     this.backgroundColor,
     this.foregroundColor,
     this.borderColor,
+    this.padding, // Thêm vào constructor primary
   }) : variant = QlzButtonVariant.primary;
 
-  /// Constructor tiện lợi cho Secondary Button
   const QlzButton.secondary({
     super.key,
     required this.label,
@@ -73,9 +74,9 @@ final class QlzButton extends StatelessWidget {
     this.backgroundColor,
     this.foregroundColor,
     this.borderColor,
+    this.padding, // Thêm vào constructor secondary
   }) : variant = QlzButtonVariant.secondary;
 
-  /// Constructor tiện lợi cho Ghost Button
   const QlzButton.ghost({
     super.key,
     required this.label,
@@ -90,9 +91,9 @@ final class QlzButton extends StatelessWidget {
     this.backgroundColor,
     this.foregroundColor,
     this.borderColor,
+    this.padding, // Thêm vào constructor ghost
   }) : variant = QlzButtonVariant.ghost;
 
-  /// Constructor tiện lợi cho Danger Button
   const QlzButton.danger({
     super.key,
     required this.label,
@@ -107,14 +108,16 @@ final class QlzButton extends StatelessWidget {
     this.backgroundColor,
     this.foregroundColor,
     this.borderColor,
+    this.padding, // Thêm vào constructor danger
   }) : variant = QlzButtonVariant.danger;
 
   @override
   Widget build(BuildContext context) {
-    final EdgeInsets padding = _getPadding();
+    final EdgeInsets effectivePadding =
+        padding ?? _getPadding(); // Ưu tiên padding tùy chỉnh
     final TextStyle textStyle = _getTextStyle(context);
 
-    Widget button = _buildButton(context, padding, textStyle);
+    Widget button = _buildButton(context, effectivePadding, textStyle);
 
     if (tooltip != null) {
       button = Tooltip(
@@ -284,15 +287,15 @@ final class QlzButton extends StatelessWidget {
     );
   }
 
-  /// Get button padding based on size
+  /// Get button padding based on size, standardized with 16dp where possible
   EdgeInsets _getPadding() {
     return switch (size) {
       QlzButtonSize.small =>
-        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       QlzButtonSize.medium =>
-        const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       QlzButtonSize.large =>
-        const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
     };
   }
 

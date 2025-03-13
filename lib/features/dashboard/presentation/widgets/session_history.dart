@@ -27,11 +27,21 @@ class SessionHistory extends StatelessWidget {
         ? sortedSessions.sublist(0, maxSessions)
         : sortedSessions;
 
+    // Guard Clause: Thoát sớm nếu danh sách rỗng
+    if (displaySessions.isEmpty) {
+      return const QlzEmptyState(
+        title: 'Chưa có lịch sử học tập',
+        message: 'Bắt đầu học để ghi lại tiến độ của bạn',
+        icon: Icons.history,
+        iconColor: AppColors.darkTextSecondary,
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16), // Chuẩn 16
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -66,52 +76,43 @@ class SessionHistory extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16), // Chuẩn hóa khoảng cách dọc thành 16
         Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          child: displaySessions.isEmpty
-              ? const QlzEmptyState(
-                  title: 'Chưa có lịch sử học tập',
-                  message: 'Bắt đầu học để ghi lại tiến độ của bạn',
-                  icon: Icons.history,
-                  // titleColor: AppColors.darkText,
-                  // messageColor: AppColors.darkTextSecondary,
-                  iconColor: AppColors.darkTextSecondary,
-                )
-              : Column(
-                  children: displaySessions.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final session = entry.value;
-                    return _buildSessionItem(
-                      context,
-                      session,
-                      showDivider: index < displaySessions.length - 1,
-                    );
-                  }).toList(),
-                ),
+          margin: const EdgeInsets.symmetric(horizontal: 16), // Chuẩn 16
+          child: ListView.builder(
+            shrinkWrap: true, // Đảm bảo không chiếm toàn bộ màn hình
+            physics: const NeverScrollableScrollPhysics(), // Tắt cuộn riêng
+            itemCount: displaySessions.length,
+            itemBuilder: (context, index) {
+              return _buildSessionItem(
+                context,
+                displaySessions[index],
+                showDivider: index < displaySessions.length - 1,
+              );
+            },
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildSessionItem(
-    BuildContext context,
-    StudySessionEntry session, {
-    bool showDivider = true,
-  }) {
+  Widget _buildSessionItem(BuildContext context, StudySessionEntry session,
+      {bool showDivider = true}) {
     return Column(
       children: [
         QlzCardItem(
           icon: Icons.menu_book_outlined,
           iconColor: AppColors.primary,
           title: session.moduleName,
-          titleStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          titleStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppColors.darkText,
                 fontWeight: FontWeight.w500,
+                fontSize: 15, // Giảm từ 16 xuống 15
               ),
           subtitle: TimeFormatter.formatDateTime(session.date),
-          subtitleStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.darkTextSecondary,
+          subtitleStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.darkTextSecondary.withOpacity(0.85),
+                fontSize: 12, // Chuẩn 12sp
               ),
           trailing: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -122,14 +123,16 @@ class SessionHistory extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       color: session.termsLearned > 0
                           ? AppColors.success
-                          : AppColors.darkText,
+                          : AppColors.darkText.withOpacity(0.9),
+                      fontSize: 14, // Chuẩn 14sp
                     ),
               ),
               const SizedBox(height: 4),
               Text(
                 TimeFormatter.formatDuration(session.durationSeconds),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.darkTextSecondary,
+                      color: AppColors.darkTextSecondary.withOpacity(0.85),
+                      fontSize: 12, // Chuẩn 12sp
                     ),
               ),
             ],
@@ -138,9 +141,9 @@ class SessionHistory extends StatelessWidget {
         ),
         if (showDivider)
           const Padding(
-            padding: EdgeInsets.only(top: 12),
+            padding: EdgeInsets.only(top: 16),
             child: Divider(
-              height: 1,
+              height: 1.5, // Tăng từ 1 lên 1.5
               color: AppColors.darkBorder,
             ),
           ),
