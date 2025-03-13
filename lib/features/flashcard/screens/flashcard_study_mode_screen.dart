@@ -1,30 +1,24 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/logic/cubit/flashcard_cubit.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/logic/states/flashcard_state.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/widgets/flashcard_progress_bar.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/widgets/flashcard_result_dialog.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_empty_state.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_loading_state.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_snackbar.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/layout/qlz_modal.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/study/qlz_flashcard.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/utils/qlz_chip.dart';
 
-import '../../../config/app_colors.dart';
-import '../../../shared/widgets/feedback/qlz_empty_state.dart';
-import '../../../shared/widgets/feedback/qlz_loading_state.dart';
-import '../../../shared/widgets/feedback/qlz_snackbar.dart';
-import '../../../shared/widgets/layout/qlz_modal.dart';
-import '../../../shared/widgets/navigation/qlz_app_bar.dart';
-import '../../../shared/widgets/study/qlz_flashcard.dart';
-import '../../../shared/widgets/utils/qlz_chip.dart';
-import '../logic/cubit/flashcard_cubit.dart';
-import '../logic/states/flashcard_state.dart';
-
-/// Entry point widget for flashcard study mode feature
 class FlashcardStudyModeScreen extends StatelessWidget {
-  /// List of flashcards to study
   final List<Flashcard> flashcards;
-
-  /// Index to start from in the flashcards list
   final int initialIndex;
 
-  /// Creates a FlashcardStudyModeScreen instance
   const FlashcardStudyModeScreen({
     super.key,
     required this.flashcards,
@@ -37,15 +31,15 @@ class FlashcardStudyModeScreen extends StatelessWidget {
       create: (context) => FlashcardCubit(
         context.read(),
       )..initializeFlashcards(
-          flashcards, initialIndex.clamp(0, flashcards.length - 1)),
+          flashcards,
+          initialIndex.clamp(
+              0, flashcards.isEmpty ? 0 : flashcards.length - 1)),
       child: const FlashcardStudyModeView(),
     );
   }
 }
 
-/// Main view for the flashcard study mode screen
 class FlashcardStudyModeView extends StatefulWidget {
-  /// Creates a FlashcardStudyModeView instance
   const FlashcardStudyModeView({super.key});
 
   @override
@@ -55,6 +49,7 @@ class FlashcardStudyModeView extends StatefulWidget {
 class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
   late final PageController _pageController;
   double _prevDragDx = 0.0;
+  bool _dialogShown = false;
 
   @override
   void initState() {
@@ -62,6 +57,7 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
     _pageController = PageController(
       initialPage: 0,
       viewportFraction: 0.9, // Improves UX by showing part of next/prev cards
+      keepPage: true,
     );
   }
 
@@ -75,18 +71,27 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
     final cubit = context.read<FlashcardCubit>();
     final state = cubit.state;
 
-    if (state.currentIndex >= state.flashcards.length - 1 && isNext) {
-      _showCompletionDialog(context);
+    // Check boundary conditions
+    if (isNext && state.currentIndex >= state.flashcards.length - 1) {
+      if (!_dialogShown) {
+        _showCompletionDialog(context);
+      }
       return;
     }
 
     if (isNext && state.hasMoreFlashcards) {
-      _pageController.nextPage(
+      final nextPage =
+          (state.currentIndex + 1).clamp(0, state.flashcards.length - 1);
+      _pageController.animateToPage(
+        nextPage,
         duration: const Duration(milliseconds: kIsWeb ? 150 : 300),
         curve: Curves.easeInOut,
       );
     } else if (!isNext && state.currentIndex > 0) {
-      _pageController.previousPage(
+      final prevPage =
+          (state.currentIndex - 1).clamp(0, state.flashcards.length - 1);
+      _pageController.animateToPage(
+        prevPage,
         duration: const Duration(milliseconds: kIsWeb ? 150 : 300),
         curve: Curves.easeInOut,
       );
@@ -96,6 +101,8 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
   void _showCompletionDialog(BuildContext context) {
     final cubit = context.read<FlashcardCubit>();
     final state = cubit.state;
+
+    _dialogShown = true;
 
     QlzModal.showDialog(
       context: context,
@@ -109,15 +116,15 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
           if (_pageController.hasClients) {
             _pageController.jumpToPage(0);
           }
+          _dialogShown = false;
         },
       ),
-    );
+    ).then((_) => _dialogShown = false);
   }
 
   Future<void> _toggleFlashcardDifficulty(Flashcard flashcard) async {
     await context.read<FlashcardCubit>().toggleDifficulty(flashcard.id);
     if (mounted) {
-      // Check if widget is still mounted
       QlzSnackbar.info(
         context: context,
         message: flashcard.isDifficult
@@ -131,16 +138,21 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
   Widget build(BuildContext context) {
     return BlocConsumer<FlashcardCubit, FlashcardState>(
       listener: (context, state) {
+        // Ensure PageController is synchronized with state
         if (_pageController.hasClients &&
             state.status == FlashcardStatus.success &&
-            state.currentIndex != _pageController.page?.round()) {
+            _pageController.page?.round() != state.currentIndex) {
           _pageController.animateToPage(
             state.currentIndex,
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
           );
         }
-        if (state.isSessionCompleted && !state.hasMoreFlashcards) {
+
+        // Show completion dialog when session is complete
+        if (state.isSessionCompleted &&
+            !state.hasMoreFlashcards &&
+            !_dialogShown) {
           _showCompletionDialog(context);
         }
       },
@@ -205,7 +217,12 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: "Bắt đầu lại",
-            onPressed: () => context.read<FlashcardCubit>().resetStudySession(),
+            onPressed: () {
+              context.read<FlashcardCubit>().resetStudySession();
+              if (_pageController.hasClients) {
+                _pageController.jumpToPage(0);
+              }
+            },
           ),
         ],
         bottom: PreferredSize(
@@ -257,7 +274,12 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
           ),
           const SizedBox(height: 40),
           OutlinedButton.icon(
-            onPressed: () => context.read<FlashcardCubit>().resetStudySession(),
+            onPressed: () {
+              context.read<FlashcardCubit>().resetStudySession();
+              if (_pageController.hasClients) {
+                _pageController.jumpToPage(0);
+              }
+            },
             icon: const Icon(Icons.refresh, size: 20),
             label: const Text("Bắt đầu lại"),
             style: OutlinedButton.styleFrom(
@@ -279,22 +301,36 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
             controller: _pageController,
             physics: const BouncingScrollPhysics(),
             itemCount: state.flashcards.length,
+            onPageChanged: (index) {
+              // Use the dedicated method in the cubit to handle page changes
+              context.read<FlashcardCubit>().onPageChanged(index);
+            },
             itemBuilder: (_, index) {
               final flashcard = state.flashcards[index];
               return GestureDetector(
                 onHorizontalDragStart: (details) =>
                     _prevDragDx = details.globalPosition.dx,
                 onHorizontalDragEnd: (details) {
+                  // Skip custom drag handling on web
                   if (kIsWeb) return;
+
+                  // Threshold for considering it a swipe
                   final dragDistance = _prevDragDx - details.globalPosition.dx;
                   if (dragDistance.abs() > 60) {
                     final isSwipeRight = dragDistance > 0;
-                    context.read<FlashcardCubit>().emit(
-                          state.copyWith(
-                            currentIndex:
-                                state.currentIndex + (isSwipeRight ? 1 : -1),
-                          ),
-                        );
+
+                    // Use PageController to animate instead of directly setting state
+                    if (isSwipeRight && index < state.flashcards.length - 1) {
+                      _pageController.nextPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    } else if (!isSwipeRight && index > 0) {
+                      _pageController.previousPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    }
                   }
                 },
                 child: Padding(
@@ -329,8 +365,15 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
                 icon: Icons.close,
                 color: AppColors.warning,
                 onPressed: () {
-                  context.read<FlashcardCubit>().markAsNotLearned();
-                  _navigateCard(context, isNext: true);
+                  final cubit = context.read<FlashcardCubit>();
+                  cubit.markAsNotLearned();
+
+                  // Navigate to next card after marking
+                  if (state.currentIndex < state.flashcards.length - 1) {
+                    _navigateCard(context, isNext: true);
+                  } else if (!_dialogShown) {
+                    _showCompletionDialog(context);
+                  }
                 },
                 tooltip: 'Chưa thuộc',
               ),
@@ -338,8 +381,15 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
                 icon: Icons.check,
                 color: AppColors.success,
                 onPressed: () {
-                  context.read<FlashcardCubit>().markAsLearned();
-                  _navigateCard(context, isNext: true);
+                  final cubit = context.read<FlashcardCubit>();
+                  cubit.markAsLearned();
+
+                  // Navigate to next card after marking
+                  if (state.currentIndex < state.flashcards.length - 1) {
+                    _navigateCard(context, isNext: true);
+                  } else if (!_dialogShown) {
+                    _showCompletionDialog(context);
+                  }
                 },
                 tooltip: 'Đã thuộc',
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 import 'package:qlz_flash_cards_ui/features/module/module_module.dart';
 
 import 'route_builder.dart';
@@ -60,9 +61,13 @@ class AppRoutes {
 
   static Future<dynamic> navigateToStudyFlashcards(
     BuildContext context, {
-    required List flashcards,
+    required List<Flashcard> flashcards,
     int initialIndex = 0,
   }) {
+    // Validate initialIndex trước khi tạo route
+    final validInitialIndex =
+        flashcards.isEmpty ? 0 : initialIndex.clamp(0, flashcards.length - 1);
+
     return Navigator.pushNamed(
       context,
       studyFlashcards,
@@ -70,7 +75,7 @@ class AppRoutes {
         routeName: studyFlashcards,
         params: {
           'flashcards': flashcards,
-          'initialIndex': initialIndex,
+          'initialIndex': validInitialIndex,
         },
       ).toMap(),
     );

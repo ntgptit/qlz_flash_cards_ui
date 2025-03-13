@@ -3,114 +3,117 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/data/models/study_progress.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../models/study_progress.dart';
-
-/// Repository for handling flashcard data and study progress
 class FlashcardRepository {
   final Dio _dio;
   final SharedPreferences _prefs;
-  
-  // Cache keys for local storage
+
+  // Cache keys
   static const String _flashcardsPrefix = 'flashcards_';
   static const String _progressPrefix = 'progress_';
   static const String _difficultyPrefix = 'difficulty_';
   static const String _lastSyncKey = 'flashcards_last_sync';
-  
-  // Flag for using mock data (development mode)
+
+  // For development/testing
   final bool _useMockData = true;
 
-  /// Creates a FlashcardRepository instance
+  // Maximum cache age in minutes
+  static const int _maxCacheAgeMinutes = 30;
+
   FlashcardRepository(this._dio, this._prefs);
 
-  /// Fetches flashcards for a specific module
-  Future<List<Flashcard>> getFlashcards({String? moduleId, bool forceRefresh = false}) async {
+  Future<List<Flashcard>> getFlashcards(
+      {String? moduleId, bool forceRefresh = false}) async {
     if (_useMockData) {
       await Future.delayed(const Duration(milliseconds: 800));
       return _getMockFlashcards();
     }
-    
+
     try {
-      // Check if valid cache exists and we're not forcing a refresh
+      // Try to use cache if valid and not forced to refresh
       if (moduleId != null && !forceRefresh && _isCacheValid()) {
         final cacheKey = '$_flashcardsPrefix$moduleId';
         final cachedData = _prefs.getString(cacheKey);
-        
+
         if (cachedData != null) {
           try {
-            final List<dynamic> decoded = jsonDecode(cachedData) as List<dynamic>;
+            final List<dynamic> decoded =
+                jsonDecode(cachedData) as List<dynamic>;
             return decoded.map((json) => Flashcard.fromJson(json)).toList();
           } catch (e) {
             debugPrint('Error decoding cached flashcards: $e');
           }
         }
       }
-      
-      // Fetch from API if no cache or force refresh
-      final String endpoint = moduleId != null 
+
+      // Fetch from API if cache not available or forced refresh
+      final String endpoint = moduleId != null
           ? '/api/modules/$moduleId/flashcards'
           : '/api/flashcards';
-      
+
       final response = await _dio.get(endpoint);
-      
+
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data['data'];
-        final flashcards = data.map((json) => Flashcard.fromJson(json)).toList();
-        
-        // Cache the fetched data if module ID is provided
+        final flashcards =
+            data.map((json) => Flashcard.fromJson(json)).toList();
+
+        // Update cache if moduleId is provided
         if (moduleId != null) {
           try {
             final cacheKey = '$_flashcardsPrefix$moduleId';
-            await _prefs.setString(cacheKey, jsonEncode(flashcards.map((e) => e.toJson()).toList()));
-            await _prefs.setString(_lastSyncKey, DateTime.now().toIso8601String());
+            await _prefs.setString(cacheKey,
+                jsonEncode(flashcards.map((e) => e.toJson()).toList()));
+            await _prefs.setString(
+                _lastSyncKey, DateTime.now().toIso8601String());
           } catch (e) {
             debugPrint('Error caching flashcards: $e');
           }
         }
-        
+
         return flashcards;
       } else {
         throw Exception('Failed to load flashcards: ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('Error fetching flashcards: $e');
-      
-      // Try to use cached data if available and module ID is provided
+
+      // Fall back to cache on error if possible
       if (moduleId != null) {
         final cacheKey = '$_flashcardsPrefix$moduleId';
         final cachedData = _prefs.getString(cacheKey);
-        
+
         if (cachedData != null) {
           try {
-            final List<dynamic> decoded = jsonDecode(cachedData) as List<dynamic>;
+            final List<dynamic> decoded =
+                jsonDecode(cachedData) as List<dynamic>;
             return decoded.map((json) => Flashcard.fromJson(json)).toList();
           } catch (e) {
             debugPrint('Error using cached flashcards: $e');
           }
         }
       }
-      
+
       rethrow;
     }
   }
 
-  /// Marks a flashcard as difficult or not difficult
   Future<bool> toggleDifficulty(String flashcardId, bool isDifficult) async {
     if (_useMockData) {
       await Future.delayed(const Duration(milliseconds: 500));
       final key = '$_difficultyPrefix$flashcardId';
       return _prefs.setBool(key, isDifficult);
     }
-    
+
     try {
       final response = await _dio.put(
         '/api/flashcards/$flashcardId/difficulty',
         data: {'isDifficult': isDifficult},
       );
-      
+
       if (response.statusCode == 200) {
-        // Cache the preference locally
         final key = '$_difficultyPrefix$flashcardId';
         await _prefs.setBool(key, isDifficult);
         return true;
@@ -119,34 +122,33 @@ class FlashcardRepository {
       }
     } catch (e) {
       debugPrint('Error updating difficulty: $e');
-      // Still try to save locally even if API fails
+
+      // Save to local preferences even on error
       final key = '$_difficultyPrefix$flashcardId';
       return _prefs.setBool(key, isDifficult);
     }
   }
 
-  /// Gets the difficulty status of a flashcard
   Future<bool> getFlashcardDifficulty(String flashcardId) async {
     final key = '$_difficultyPrefix$flashcardId';
     return _prefs.getBool(key) ?? false;
   }
 
-  /// Saves study progress for a module
-  Future<bool> saveStudyProgress(String moduleId, StudyProgress progress) async {
+  Future<bool> saveStudyProgress(
+      String moduleId, StudyProgress progress) async {
     if (_useMockData) {
       await Future.delayed(const Duration(milliseconds: 500));
       final key = '$_progressPrefix$moduleId';
       return _prefs.setString(key, jsonEncode(progress.toJson()));
     }
-    
+
     try {
       final response = await _dio.post(
         '/api/modules/$moduleId/progress',
         data: progress.toJson(),
       );
-      
+
       if (response.statusCode == 200) {
-        // Cache the progress locally
         final key = '$_progressPrefix$moduleId';
         await _prefs.setString(key, jsonEncode(progress.toJson()));
         return true;
@@ -155,17 +157,17 @@ class FlashcardRepository {
       }
     } catch (e) {
       debugPrint('Error saving progress: $e');
-      // Still try to save locally even if API fails
+
+      // Save to local preferences even on error
       final key = '$_progressPrefix$moduleId';
       return _prefs.setString(key, jsonEncode(progress.toJson()));
     }
   }
 
-  /// Gets study progress for a module
   Future<StudyProgress?> getStudyProgress(String moduleId) async {
     final key = '$_progressPrefix$moduleId';
     final progressData = _prefs.getString(key);
-    
+
     if (progressData != null) {
       try {
         return StudyProgress.fromJson(jsonDecode(progressData));
@@ -174,17 +176,16 @@ class FlashcardRepository {
         return null;
       }
     }
-    
+
     if (_useMockData) {
       return null;
     }
-    
+
     try {
       final response = await _dio.get('/api/modules/$moduleId/progress');
-      
+
       if (response.statusCode == 200) {
         final progress = StudyProgress.fromJson(response.data);
-        // Cache the progress locally
         await _prefs.setString(key, jsonEncode(progress.toJson()));
         return progress;
       } else {
@@ -196,24 +197,25 @@ class FlashcardRepository {
     }
   }
 
-  /// Checks if the cache is still valid
+  /// Determines if the cached data is still valid
   bool _isCacheValid() {
     final lastSyncStr = _prefs.getString(_lastSyncKey);
     if (lastSyncStr == null) return false;
-    
+
     try {
       final lastSync = DateTime.parse(lastSyncStr);
       final now = DateTime.now();
       final difference = now.difference(lastSync);
-      // Consider cache valid if less than 1 hour old
-      return difference.inHours < 1;
+
+      // Cache is valid if less than the specified maximum age
+      return difference.inMinutes < _maxCacheAgeMinutes;
     } catch (e) {
       debugPrint('Error parsing last sync date: $e');
       return false;
     }
   }
 
-  /// Generates mock flashcards for development
+  /// Provides mock flashcards for development/testing
   List<Flashcard> _getMockFlashcards() {
     final List<Flashcard> flashcards = [];
     final List<Map<String, String>> koreanWords = [
@@ -228,7 +230,7 @@ class FlashcardRepository {
       {'term': '키위', 'definition': 'Quả kiwi', 'example': '키위는 갈색이에요.'},
       {'term': '복숭아', 'definition': 'Quả đào', 'example': '복숭아는 달아요.'},
     ];
-    
+
     for (int i = 0; i < 10; i++) {
       final wordData = koreanWords[i % koreanWords.length];
       flashcards.add(
@@ -242,7 +244,7 @@ class FlashcardRepository {
         ),
       );
     }
-    
+
     return flashcards;
   }
 }

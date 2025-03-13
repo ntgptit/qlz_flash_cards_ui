@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/config/app_theme.dart';
-import 'package:qlz_flash_cards_ui/core/managers/cubit_manager.dart';
+import 'package:qlz_flash_cards_ui/core/providers/app_providers.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -48,7 +48,6 @@ final class QlzFlashCardsApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Không cần sử dụng CubitManager().globalProviders nữa
     final app = MaterialApp(
       title: 'Quizlet Flash Cards',
       debugShowCheckedModeBanner: false,

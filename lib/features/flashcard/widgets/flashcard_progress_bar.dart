@@ -1,28 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 
-import '../../../config/app_colors.dart';
-
-/// A custom progress bar widget for flashcard study sessions
+/// A customizable progress bar for flashcard study sessions
 class FlashcardProgressBar extends StatelessWidget {
-  /// The progress value (0.0 to 1.0)
+  /// The progress value between 0.0 and 1.0
   final double progress;
-  
-  /// Height of the progress bar
+
+  /// The height of the progress bar
   final double height;
-  
-  /// Background color of the progress bar
+
+  /// The background color of the progress bar
   final Color? backgroundColor;
-  
-  /// Color of the progress indicator
+
+  /// The color of the progress indicator
   final Color? progressColor;
-  
-  /// Whether to animate changes in the progress value
+
+  /// Whether to animate changes in progress
   final bool animate;
-  
-  /// Duration of the animation
+
+  /// The duration of the animation
   final Duration animationDuration;
 
-  /// Creates a FlashcardProgressBar instance
   const FlashcardProgressBar({
     super.key,
     required this.progress,
@@ -31,54 +29,64 @@ class FlashcardProgressBar extends StatelessWidget {
     this.progressColor,
     this.animate = true,
     this.animationDuration = const Duration(milliseconds: 300),
-  });
+  }) : assert(progress >= 0.0 && progress <= 1.0,
+            'Progress must be between 0.0 and 1.0');
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final effectiveBackgroundColor = backgroundColor ?? 
-        (theme.brightness == Brightness.dark 
-            ? const Color(0xFF1A1D3D) 
+
+    // Determine colors based on theme if not explicitly provided
+    final effectiveBackgroundColor = backgroundColor ??
+        (theme.brightness == Brightness.dark
+            ? const Color(0xFF1A1D3D)
             : theme.colorScheme.surfaceContainerHighest);
-    
+
     final effectiveProgressColor = progressColor ?? AppColors.primary;
 
     return SizedBox(
       height: height,
-      child: Stack(
-        children: [
-          // Background
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: effectiveBackgroundColor,
-            ),
-          ),
-          
-          // Progress indicator
-          animate
-              ? AnimatedContainer(
-                  duration: animationDuration,
-                  width: MediaQuery.of(context).size.width * progress,
-                  decoration: BoxDecoration(
-                    color: effectiveProgressColor,
-                    borderRadius: const BorderRadius.only(
-                      topRight: Radius.circular(2.0),
-                      bottomRight: Radius.circular(2.0),
-                    ),
-                  ),
-                )
-              : Container(
-                  width: MediaQuery.of(context).size.width * progress,
-                  decoration: BoxDecoration(
-                    color: effectiveProgressColor,
-                    borderRadius: const BorderRadius.only(
-                      topRight: Radius.circular(2.0),
-                      bottomRight: Radius.circular(2.0),
-                    ),
-                  ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxWidth = constraints.maxWidth;
+
+          return Stack(
+            children: [
+              // Background
+              Container(
+                width: maxWidth,
+                decoration: BoxDecoration(
+                  color: effectiveBackgroundColor,
                 ),
-        ],
+              ),
+
+              // Progress indicator
+              animate
+                  ? AnimatedContainer(
+                      duration: animationDuration,
+                      curve: Curves.easeInOut,
+                      width: maxWidth * progress,
+                      decoration: BoxDecoration(
+                        color: effectiveProgressColor,
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(2.0),
+                          bottomRight: Radius.circular(2.0),
+                        ),
+                      ),
+                    )
+                  : Container(
+                      width: maxWidth * progress,
+                      decoration: BoxDecoration(
+                        color: effectiveProgressColor,
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(2.0),
+                          bottomRight: Radius.circular(2.0),
+                        ),
+                      ),
+                    ),
+            ],
+          );
+        },
       ),
     );
   }

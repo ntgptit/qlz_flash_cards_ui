@@ -2,22 +2,16 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:qlz_flash_cards_ui/core/managers/cubit_manager.dart';
+import 'package:qlz_flash_cards_ui/core/providers/app_providers.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/data/repositories/flashcard_repository.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/logic/cubit/flashcard_cubit.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/screens/flashcard_study_mode_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'data/repositories/flashcard_repository.dart';
-import 'logic/cubit/flashcard_cubit.dart';
-import 'screens/flashcard_study_mode_screen.dart';
-
-/// Entry point for the Flashcard feature module
-/// Provides screens and initializes dependencies
+/// Factory class to provide flashcard screens and BLoC providers
 class FlashcardModule {
-  //-------------------------------------------------------------------------
-  // CURRENT METHODS (FOR BACKWARD COMPATIBILITY)
-  //-------------------------------------------------------------------------
-
-  /// Provides the flashcard study mode screen with dependency injection
+  /// Provides a standalone study mode screen without Riverpod
   static Widget provideStudyModeScreen({
     required List<Flashcard> flashcards,
     int initialIndex = 0,
@@ -40,7 +34,10 @@ class FlashcardModule {
           value: repository,
           child: BlocProvider(
             create: (context) => FlashcardCubit(repository)
-              ..initializeFlashcards(flashcards, initialIndex),
+              ..initializeFlashcards(
+                  flashcards,
+                  initialIndex.clamp(
+                      0, flashcards.isEmpty ? 0 : flashcards.length - 1)),
             child: const FlashcardStudyModeView(),
           ),
         );
@@ -48,27 +45,23 @@ class FlashcardModule {
     );
   }
 
-  //-------------------------------------------------------------------------
-  // RIVERPOD METHODS
-  //-------------------------------------------------------------------------
-
-  /// Provides the flashcard study mode screen using Riverpod
-  ///
-  /// Uses Riverpod for dependency management instead of creating new instances
+  /// Provides a study mode screen using Riverpod for dependency injection
   static Widget provideRiverpodStudyModeScreen({
     required WidgetRef ref,
     required List<Flashcard> flashcards,
     int initialIndex = 0,
   }) {
-    // Get repository from Riverpod provider
+    // Get repository from Riverpod
     final repository = ref.read(flashcardRepositoryProvider);
 
-    // Create a new FlashcardCubit with initializeFlashcards
-    // Note: We're creating a new cubit here instead of using an existing provider
-    // because this cubit is specific to the flashcards passed in
+    // Create cubit with proper initialization
     final flashcardCubit = FlashcardCubit(repository)
-      ..initializeFlashcards(flashcards, initialIndex);
+      ..initializeFlashcards(
+          flashcards,
+          initialIndex.clamp(
+              0, flashcards.isEmpty ? 0 : flashcards.length - 1));
 
+    // Provide repository and cubit to widget tree
     return RepositoryProvider.value(
       value: repository,
       child: BlocProvider.value(
@@ -78,13 +71,7 @@ class FlashcardModule {
     );
   }
 
-  //-------------------------------------------------------------------------
-  // HELPER METHODS
-  //-------------------------------------------------------------------------
-
-  /// Utility method to wrap a widget with flashcard providers
-  ///
-  /// Returns a widget wrapped with FlashcardRepository and FlashcardCubit
+  /// Wraps any widget with flashcard providers
   static Widget wrapWithFlashcardProviders({
     required Widget child,
     required WidgetRef ref,
@@ -93,7 +80,10 @@ class FlashcardModule {
   }) {
     final repository = ref.read(flashcardRepositoryProvider);
     final flashcardCubit = FlashcardCubit(repository)
-      ..initializeFlashcards(flashcards, initialIndex);
+      ..initializeFlashcards(
+          flashcards,
+          initialIndex.clamp(
+              0, flashcards.isEmpty ? 0 : flashcards.length - 1));
 
     return MultiBlocProvider(
       providers: [

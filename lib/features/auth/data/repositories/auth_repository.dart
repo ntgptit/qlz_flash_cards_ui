@@ -14,16 +14,16 @@ class AuthRepository {
       await Future.delayed(const Duration(seconds: 1));
 
       // Mô phỏng gọi API
-      // final response = await _dio.post('/api/auth/login', data: {
-      //   'email': email,
-      //   'password': password,
-      // });
+      final response = await _dio.post('/api/auth/login', data: {
+        'email': email,
+        'password': password,
+      });
 
       // Xử lý token trả về
-      // if (response.statusCode == 200) {
-      //   final token = response.data['token'];
-      //   // Lưu token
-      // }
+      if (response.statusCode == 200) {
+        // final token = response.data['token'];
+        // Lưu token
+      }
 
       return;
     } on DioException catch (e) {

@@ -3,7 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:qlz_flash_cards_ui/core/managers/cubit_manager.dart';
+import 'package:qlz_flash_cards_ui/core/providers/app_providers.dart';
 import 'package:qlz_flash_cards_ui/features/library/logic/cubit/classes_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/library/logic/cubit/folders_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/library/logic/cubit/study_sets_cubit.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:qlz_flash_cards_ui/core/managers/cubit_manager.dart';
+import 'package:qlz_flash_cards_ui/core/providers/app_providers.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/flashcard_module.dart';
 import 'package:qlz_flash_cards_ui/features/library/library_module.dart';
@@ -116,11 +116,17 @@ class RouteBuilder {
     AppRoutes.studyFlashcards: (params) => Consumer(
           builder: (context, ref, _) {
             final flashcards = params.getFlashcards('flashcards');
+
+            // Validate initialIndex để tránh lỗi khi flashcards rỗng
             final initialIndex = params.getInt('initialIndex', 0);
+            final validInitialIndex = flashcards.isEmpty
+                ? 0
+                : initialIndex.clamp(0, flashcards.length - 1);
+
             return FlashcardModule.provideRiverpodStudyModeScreen(
               ref: ref,
               flashcards: flashcards,
-              initialIndex: initialIndex,
+              initialIndex: validInitialIndex,
             );
           },
         ),

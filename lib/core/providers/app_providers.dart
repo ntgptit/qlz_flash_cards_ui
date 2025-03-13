@@ -1,4 +1,6 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Repository imports
 import 'package:qlz_flash_cards_ui/features/auth/data/repositories/auth_repository.dart';
@@ -259,3 +261,52 @@ final flashcardCubitProvider = Provider.autoDispose<FlashcardCubit>((ref) {
 
 /// Hằng số để kiểm tra xem ứng dụng có đang chạy ở chế độ debug hay không
 const bool kDebugMode = !bool.fromEnvironment('dart.vm.product');
+
+//-------------------------------------------------------------------------
+// RIVERPOD-BLOC HELPER UTILITIES
+//-------------------------------------------------------------------------
+
+/// Tiện ích để hỗ trợ tích hợp giữa Riverpod và Bloc
+class RiverpodBlocHelper {
+  /// Khởi tạo providers trong một container riêng biệt
+  static Future<ProviderContainer> initializeProviders() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Override provider với instance thực
+    final container = ProviderContainer(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
+    );
+
+    return container;
+  }
+
+  /// Tạo BlocProvider từ một Riverpod provider
+  static BlocProvider<T> getBlocProvider<T extends Cubit>(
+    Provider<T> provider,
+    WidgetRef ref,
+  ) {
+    return BlocProvider<T>.value(
+      value: ref.read(provider),
+    );
+  }
+
+  /// Bọc một widget với nhiều BlocProviders từ Riverpod
+  static Widget wrapWithBlocs(
+    Widget child,
+    WidgetRef ref, {
+    List<Provider> providers = const [],
+  }) {
+    final blocProviders = providers.map((provider) {
+      return BlocProvider.value(
+        value: ref.read(provider) as Cubit,
+      );
+    }).toList();
+
+    return MultiBlocProvider(
+      providers: blocProviders,
+      child: child,
+    );
+  }
+}
