@@ -1,15 +1,25 @@
-// lib/features/quiz/presentation/widgets/quiz_header.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
-import 'package:qlz_flash_cards_ui/features/quiz/logic/states/quiz_state.dart';
+import 'package:qlz_flash_cards_ui/features/quiz/presentation/providers/quiz_providers.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/data_display/qlz_progress.dart';
 
+/// Hiển thị phần header của màn hình quiz bao gồm số câu hỏi, timer, và thanh tiến độ
+/// Widget này không phụ thuộc vào QuizState trực tiếp, mà nhận các tham số đã được tính toán
 class QuizHeader extends StatelessWidget {
-  final QuizState state;
+  final int currentQuestionIndex;
+  final int totalQuestions;
+  final bool enableTimer;
+  final String formattedRemainingTime;
+  final double progress;
 
   const QuizHeader({
     super.key,
-    required this.state,
+    required this.currentQuestionIndex,
+    required this.totalQuestions,
+    required this.enableTimer,
+    required this.formattedRemainingTime,
+    required this.progress,
   });
 
   @override
@@ -32,14 +42,14 @@ class QuizHeader extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Câu ${state.currentQuestionIndex + 1}/${state.questions.length}',
+                'Câu ${currentQuestionIndex + 1}/$totalQuestions',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              if (state.enableTimer)
+              if (enableTimer)
                 Row(
                   children: [
                     const Icon(
@@ -49,7 +59,7 @@ class QuizHeader extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      state.formattedRemainingTime,
+                      formattedRemainingTime,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -65,7 +75,7 @@ class QuizHeader extends StatelessWidget {
 
           // Thanh tiến độ
           QlzProgress(
-            value: state.progress,
+            value: progress,
             height: 8,
             type: QlzProgressType.linear,
             color: AppColors.primary,
@@ -73,6 +83,38 @@ class QuizHeader extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Consumer widget kết nối QuizHeader với Riverpod state
+class QuizHeaderConsumer extends ConsumerWidget {
+  const QuizHeaderConsumer({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Sử dụng select để chỉ rebuild khi các trường cụ thể thay đổi
+    final currentQuestionIndex =
+        ref.watch(quizProvider.select((state) => state.currentQuestionIndex));
+
+    final totalQuestions =
+        ref.watch(quizProvider.select((state) => state.questions.length));
+
+    final enableTimer =
+        ref.watch(quizProvider.select((state) => state.enableTimer));
+
+    final formattedRemainingTime =
+        ref.watch(quizProvider.select((state) => state.formattedRemainingTime));
+
+    final progress = ref.watch(quizProvider.select((state) => state.progress));
+
+    // Chuyển các giá trị đã được tính toán sang component presentational thuần túy
+    return QuizHeader(
+      currentQuestionIndex: currentQuestionIndex,
+      totalQuestions: totalQuestions,
+      enableTimer: enableTimer,
+      formattedRemainingTime: formattedRemainingTime,
+      progress: progress,
     );
   }
 }

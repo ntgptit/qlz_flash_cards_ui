@@ -1,12 +1,10 @@
-// lib/features/quiz/presentation/screens/quiz_screen_settings.dart
-
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_settings.dart';
-import 'package:qlz_flash_cards_ui/features/quiz/logic/cubit/quiz_settings_cubit.dart';
-import 'package:qlz_flash_cards_ui/features/quiz/logic/states/quiz_settings_state.dart';
+import 'package:qlz_flash_cards_ui/features/quiz/domain/states/quiz_settings_state.dart';
+import 'package:qlz_flash_cards_ui/features/quiz/presentation/providers/quiz_providers.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/presentation/widgets/quiz_help_dialog.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/presentation/widgets/quiz_options_section.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/presentation/widgets/quiz_question_settings.dart';
@@ -17,15 +15,9 @@ import 'package:qlz_flash_cards_ui/shared/widgets/layout/qlz_modal.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/layout/qlz_screen.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
 
-/// Màn hình cài đặt bài kiểm tra
-class QuizScreenSettings extends StatefulWidget {
-  /// ID của module
+class QuizScreenSettings extends ConsumerStatefulWidget {
   final String moduleId;
-
-  /// Tên của module
   final String moduleName;
-
-  /// Danh sách flashcards
   final List<Flashcard> flashcards;
 
   const QuizScreenSettings({
@@ -36,89 +28,106 @@ class QuizScreenSettings extends StatefulWidget {
   });
 
   @override
-  State<QuizScreenSettings> createState() => _QuizScreenSettingsState();
+  ConsumerState<QuizScreenSettings> createState() => _QuizScreenSettingsState();
 }
 
-class _QuizScreenSettingsState extends State<QuizScreenSettings> {
-  // Key cho form validation
+class _QuizScreenSettingsState extends ConsumerState<QuizScreenSettings> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  bool _isLoading = true;
 
-  // Biến để tracking nếu form đã được submit
-  bool _hasAttemptedSubmit = false;
+  @override
+  void initState() {
+    super.initState();
+    // Khởi tạo state sau khi frame đầu tiên được render
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeSettings();
+    });
+  }
+
+  // Khởi tạo các settings một cách an toàn
+  void _initializeSettings() {
+    ref
+        .read(quizSettingsProvider.notifier)
+        .initialize(widget.flashcards.length);
+
+    final settings = ref.read(quizSettingsProvider);
+    ref.read(timePerQuestionProvider.notifier).state = settings.timePerQuestion;
+    ref.read(questionCountProvider.notifier).state = settings.questionCount;
+
+    // Đánh dấu đã khởi tạo và cập nhật UI
+    ref.read(quizScreenStateProvider.notifier).setInitialized(true);
+    setState(() {
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<QuizSettingsCubit, QuizSettingsState>(
-      builder: (context, state) {
-        return QlzScreen(
-          appBar: QlzAppBar(
-            title: 'Thiết lập bài kiểm tra',
-            automaticallyImplyLeading: true,
-            actions: [
-              // Thêm nút help
-              IconButton(
-                icon: const Icon(Icons.help_outline),
-                onPressed: () => _showHelpDialog(context),
-                tooltip: 'Trợ giúp',
+    // Hiển thị loading khi đang khởi tạo
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final screenState = ref.watch(quizScreenStateProvider);
+    final settingsState = ref.watch(quizSettingsProvider);
+
+    return QlzScreen(
+      appBar: QlzAppBar(
+        title: 'Thiết lập bài kiểm tra',
+        automaticallyImplyLeading: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            onPressed: () => _showHelpDialog(context),
+            tooltip: 'Trợ giúp',
+          ),
+        ],
+      ),
+      padding: EdgeInsets.zero,
+      withScrollView: true,
+      child: Form(
+        key: _formKey,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: 24),
+
+              // Quiz Type Selector
+              QuizTypeSection(
+                selectedQuizType: settingsState.quizType,
+                onQuizTypeSelected: (type) =>
+                    _onQuizTypeSelected(context, type, ref),
               ),
+              const SizedBox(height: 24),
+
+              // Question Count Settings
+              QuizQuestionSettings(
+                maxQuestionCount: widget.flashcards.length,
+                hasAttemptedSubmit: screenState.hasAttemptedSubmit,
+              ),
+              const SizedBox(height: 24),
+
+              // Quiz Options
+              QuizOptionsSection(
+                hasAttemptedSubmit: screenState.hasAttemptedSubmit,
+              ),
+              const SizedBox(height: 32),
+
+              // Start Quiz Button
+              _buildStartQuizButton(context, settingsState, ref),
             ],
           ),
-          padding: EdgeInsets.zero, // Không cần padding ở ngoài
-          withScrollView: true,
-          child: Form(
-            key: _formKey,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(context),
-                  const SizedBox(height: 24),
-                  QuizTypeSection(
-                    selectedQuizType: state.quizType,
-                    onQuizTypeSelected: (type) =>
-                        _onQuizTypeSelected(context, type),
-                  ),
-                  const SizedBox(height: 24),
-                  QuizQuestionSettings(
-                    questionCount: state.questionCount,
-                    maxQuestionCount: widget.flashcards.length,
-                    hasAttemptedSubmit: _hasAttemptedSubmit,
-                    onQuestionCountChanged: (count) => context
-                        .read<QuizSettingsCubit>()
-                        .setQuestionCount(count),
-                  ),
-                  const SizedBox(height: 24),
-                  QuizOptionsSection(
-                    shuffleQuestions: state.shuffleQuestions,
-                    showCorrectAnswers: state.showCorrectAnswers,
-                    enableTimer: state.enableTimer,
-                    timePerQuestion: state.timePerQuestion,
-                    hasAttemptedSubmit: _hasAttemptedSubmit,
-                    onShuffleQuestionsChanged: (value) => context
-                        .read<QuizSettingsCubit>()
-                        .setShuffleQuestions(value),
-                    onShowCorrectAnswersChanged: (value) => context
-                        .read<QuizSettingsCubit>()
-                        .setShowCorrectAnswers(value),
-                    onEnableTimerChanged: (value) =>
-                        context.read<QuizSettingsCubit>().setEnableTimer(value),
-                    onTimePerQuestionChanged: (time) => context
-                        .read<QuizSettingsCubit>()
-                        .setTimePerQuestion(time),
-                  ),
-                  const SizedBox(height: 32),
-                  _buildStartQuizButton(context, state),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  // Widget cho phần tiêu đề
+  // Header with title and description
   Widget _buildHeader(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -152,28 +161,22 @@ class _QuizScreenSettingsState extends State<QuizScreenSettings> {
     );
   }
 
-  // Widget cho nút bắt đầu làm bài kiểm tra
-  Widget _buildStartQuizButton(BuildContext context, QuizSettingsState state) {
+  // Start Quiz Button
+  Widget _buildStartQuizButton(
+      BuildContext context, QuizSettingsState state, WidgetRef ref) {
     return QlzButton(
       label: 'Bắt đầu làm kiểm tra',
       isFullWidth: true,
       size: QlzButtonSize.large,
       variant: QlzButtonVariant.primary,
-      onPressed: () => _validateAndStartQuiz(context, state),
+      onPressed: () => _validateAndStartQuiz(context, state, ref),
     );
   }
 
-  // Xử lý khi chọn loại quiz
-  void _onQuizTypeSelected(BuildContext context, QuizType type) {
-    // Kiểm tra trạng thái của cubit trước khi emit
-    final cubit = context.read<QuizSettingsCubit>();
-    if (cubit.isClosed) return; // Thêm kiểm tra này để tránh lỗi
-
-    cubit.setQuizType(type);
-
-    // Hiển thị tooltip giải thích
+  // OnQuizTypeSelected handler
+  void _onQuizTypeSelected(BuildContext context, QuizType type, WidgetRef ref) {
+    ref.read(quizSettingsProvider.notifier).setQuizType(type);
     final description = QuizTypeHelper.getQuizTypeDescription(type);
-
     QlzSnackbar.info(
       context: context,
       message: description,
@@ -181,7 +184,7 @@ class _QuizScreenSettingsState extends State<QuizScreenSettings> {
     );
   }
 
-  // Hiện dialog trợ giúp
+  // Show help dialog
   void _showHelpDialog(BuildContext context) {
     QlzModal.showDialog(
       context: context,
@@ -190,19 +193,34 @@ class _QuizScreenSettingsState extends State<QuizScreenSettings> {
     );
   }
 
-  // Validate và bắt đầu quiz
-  void _validateAndStartQuiz(BuildContext context, QuizSettingsState state) {
-    // Đánh dấu đã attempt submit để hiển thị lỗi nếu có
-    setState(() {
-      _hasAttemptedSubmit = true;
-    });
+  // Validation and starting quiz
+  void _validateAndStartQuiz(
+      BuildContext context, QuizSettingsState state, WidgetRef ref) {
+    ref.read(quizScreenStateProvider.notifier).setHasAttemptedSubmit(true);
 
-    // Kiểm tra form hợp lệ
-    if (_formKey.currentState?.validate() ?? false) {
-      // Bắt đầu quiz
-      _startQuiz(context, state);
+    // Validate question count
+    final questionCountText = ref.read(questionCountControllerProvider).text;
+    final questionCount = int.tryParse(questionCountText);
+
+    // Validate time per question if enabled
+    bool timeValid = true;
+    if (state.enableTimer) {
+      final timePerQuestionText =
+          ref.read(timePerQuestionControllerProvider).text;
+      final timePerQuestion = int.tryParse(timePerQuestionText);
+      timeValid = timePerQuestion != null &&
+          timePerQuestion >= 5 &&
+          timePerQuestion <= 300;
+    }
+
+    final isValid = questionCount != null &&
+        questionCount >= 1 &&
+        questionCount <= widget.flashcards.length &&
+        timeValid;
+
+    if (isValid) {
+      _startQuiz(context, state, ref);
     } else {
-      // Hiển thị thông báo lỗi
       QlzSnackbar.error(
         context: context,
         message: 'Vui lòng kiểm tra lại các thông tin cài đặt',
@@ -211,22 +229,11 @@ class _QuizScreenSettingsState extends State<QuizScreenSettings> {
     }
   }
 
-  // Method để bắt đầu quiz
-  void _startQuiz(BuildContext context, QuizSettingsState state) {
-    // Xác thực lại các tham số
-    int questionCount = state.questionCount;
+  // Start quiz with current settings
+  void _startQuiz(
+      BuildContext context, QuizSettingsState state, WidgetRef ref) {
+    final questionCount = ref.read(questionCountProvider);
 
-    // Đảm bảo không vượt quá số lượng thẻ
-    if (questionCount > widget.flashcards.length) {
-      questionCount = widget.flashcards.length;
-    }
-
-    // Đảm bảo ít nhất 1 câu hỏi
-    if (questionCount < 1) {
-      questionCount = 1;
-    }
-
-    // Kiểm tra số lượng flashcards có đủ không
     if (widget.flashcards.isEmpty) {
       QlzSnackbar.error(
         context: context,
@@ -236,7 +243,6 @@ class _QuizScreenSettingsState extends State<QuizScreenSettings> {
       return;
     }
 
-    // Hiển thị modal xác nhận
     QlzModal.showConfirmation(
       context: context,
       title: 'Bắt đầu bài kiểm tra?',
@@ -246,7 +252,6 @@ class _QuizScreenSettingsState extends State<QuizScreenSettings> {
       cancelText: 'Huỷ',
     ).then((confirmed) {
       if (confirmed) {
-        // Chuyển sang màn hình quiz
         AppRoutes.navigateToQuiz(
           context,
           quizTypeIndex: state.quizType.index,
@@ -259,7 +264,7 @@ class _QuizScreenSettingsState extends State<QuizScreenSettings> {
           shuffleQuestions: state.shuffleQuestions,
           showCorrectAnswers: state.showCorrectAnswers,
           enableTimer: state.enableTimer,
-          timePerQuestion: state.timePerQuestion,
+          timePerQuestion: ref.read(timePerQuestionProvider),
         );
       }
     });

@@ -1,10 +1,7 @@
-// lib/features/quiz/presentation/screens/quiz_screen.dart
-
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:qlz_flash_cards_ui/features/quiz/data/services/quiz_service.dart';
-import 'package:qlz_flash_cards_ui/features/quiz/logic/cubit/quiz_cubit.dart';
-import 'package:qlz_flash_cards_ui/features/quiz/logic/states/quiz_state.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qlz_flash_cards_ui/features/quiz/domain/states/quiz_state.dart';
+import 'package:qlz_flash_cards_ui/features/quiz/presentation/providers/quiz_providers.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/presentation/widgets/quiz_answers_section.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/presentation/widgets/quiz_footer.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/presentation/widgets/quiz_header.dart';
@@ -15,61 +12,55 @@ import 'package:qlz_flash_cards_ui/shared/widgets/layout/qlz_modal.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/layout/qlz_screen.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
 
-/// Màn hình làm bài kiểm tra
-class QuizScreen extends StatefulWidget {
+class QuizScreen extends ConsumerWidget {
   const QuizScreen({super.key});
 
   @override
-  State<QuizScreen> createState() => _QuizScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Sử dụng selector để chỉ rebuild khi status thay đổi
+    final status = ref.watch(quizProvider.select((state) => state.status));
 
-class _QuizScreenState extends State<QuizScreen> {
-  // Sử dụng một instance service để sử dụng các helper method
-  final QuizService _quizService = QuizService();
+    // Lắng nghe các thay đổi trạng thái
+    ref.listen<QuizStatus>(quizProvider.select((state) => state.status),
+        (previous, current) => _handleStatusChange(context, current, ref));
 
-  @override
-  Widget build(BuildContext context) {
-    return BlocConsumer<QuizCubit, QuizState>(
-      listener: _quizStateListener,
-      builder: (context, state) {
-        return QlzScreen(
-          appBar: QlzAppBar(
-            title: state.moduleName,
-            automaticallyImplyLeading: true,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.exit_to_app),
-                onPressed: () => _confirmExit(context),
-              ),
-            ],
-          ),
-          padding: EdgeInsets.zero,
-          child: _buildQuizContent(context, state),
-        );
-      },
+    return QlzScreen(
+      appBar: _buildAppBar(context, ref),
+      padding: EdgeInsets.zero,
+      child: _buildContent(context, ref, status),
     );
   }
 
-  /// Listener để phản ứng với các thay đổi trạng thái
-  void _quizStateListener(BuildContext context, QuizState state) {
-    // Xử lý khi trạng thái quiz thay đổi
-    if (state.status == QuizStatus.completed) {
-      _showResultModal(context, state);
-    } else if (state.status == QuizStatus.exited) {
-      Navigator.of(context).pop();
-    }
+  PreferredSizeWidget _buildAppBar(BuildContext context, WidgetRef ref) {
+    final moduleName =
+        ref.watch(quizProvider.select((state) => state.moduleName));
+
+    return QlzAppBar(
+      title: moduleName,
+      automaticallyImplyLeading: true,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.exit_to_app),
+          onPressed: () => _confirmExit(context, ref),
+        ),
+      ],
+    );
   }
 
-  /// Xây dựng nội dung chính của màn hình quiz
-  Widget _buildQuizContent(BuildContext context, QuizState state) {
-    // Kiểm tra trạng thái quiz
-    if (state.status == QuizStatus.initial) {
+  Widget _buildContent(BuildContext context, WidgetRef ref, QuizStatus status) {
+    // Kiểm tra trạng thái ban đầu
+    if (status == QuizStatus.initial) {
       return const Center(
         child: CircularProgressIndicator(),
       );
     }
 
-    if (state.questions.isEmpty) {
+    // Lấy các dữ liệu cần thiết từ state
+    final questions =
+        ref.watch(quizProvider.select((state) => state.questions));
+
+    // Kiểm tra danh sách câu hỏi
+    if (questions.isEmpty) {
       return QlzEmptyState.error(
         title: 'Không có câu hỏi',
         message: 'Không thể tạo câu hỏi cho bài kiểm tra này.',
@@ -77,8 +68,9 @@ class _QuizScreenState extends State<QuizScreen> {
       );
     }
 
-    // Lấy câu hỏi hiện tại
-    final currentQuestion = state.currentQuestion;
+    // Sử dụng provider riêng cho câu hỏi hiện tại để tối ưu hóa rebuild
+    final currentQuestion = ref.watch(currentQuestionProvider);
+
     if (currentQuestion == null) {
       return QlzEmptyState.error(
         title: 'Lỗi bài kiểm tra',
@@ -89,10 +81,10 @@ class _QuizScreenState extends State<QuizScreen> {
 
     return Column(
       children: [
-        // Phần header và thanh tiến độ
-        QuizHeader(state: state),
+        // Sử dụng QuizHeaderConsumer thay vì QuizHeaderView
+        const QuizHeaderConsumer(),
 
-        // Phần nội dung câu hỏi
+        // Quiz Content
         Expanded(
           child: SingleChildScrollView(
             child: Padding(
@@ -100,63 +92,40 @@ class _QuizScreenState extends State<QuizScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Hiển thị câu hỏi
+                  // Quiz Question
                   QuizQuestionCard(question: currentQuestion.question),
-
                   const SizedBox(height: 24),
 
-                  // Hiển thị các đáp án
-                  QuizAnswersSection(
-                    quizType: currentQuestion.quizType,
-                    questionTypeLabel: _quizService.getQuestionTypeLabel(
-                      currentQuestion.quizType,
-                    ),
-                    answers: currentQuestion.answers,
-                    userAnswer: state.currentUserAnswer,
-                    correctAnswer: currentQuestion.correctAnswer,
-                    hasAnswered: state.hasAnsweredCurrentQuestion,
-                    showCorrectAnswers: state.showCorrectAnswers,
-                    onAnswerSelected: (answer) =>
-                        context.read<QuizCubit>().answerQuestion(answer),
-                  ),
+                  // Quiz Answers
+                  const QuizAnswersView(),
                 ],
               ),
             ),
           ),
         ),
 
-        // Phần footer với nút điều hướng
-        QuizFooter(
-          currentQuestionIndex: state.currentQuestionIndex,
-          totalQuestions: state.questions.length,
-          hasAnswered: state.hasAnsweredCurrentQuestion,
-          onPreviousPressed: () => context.read<QuizCubit>().previousQuestion(),
-          onNextPressed: () => context.read<QuizCubit>().nextQuestion(),
-          onSkipPressed: () => _confirmSkipQuestion(context),
-        ),
+        // Quiz Footer
+        const QuizFooterView(),
       ],
     );
   }
 
-  /// Hiển thị hộp thoại xác nhận khi bỏ qua câu hỏi
-  void _confirmSkipQuestion(BuildContext context) {
-    QlzModal.showConfirmation(
-      context: context,
-      title: 'Bỏ qua câu hỏi?',
-      message:
-          'Bạn chưa trả lời câu hỏi này. Bạn có chắc chắn muốn bỏ qua không?',
-      confirmText: 'Bỏ qua',
-      cancelText: 'Tiếp tục làm',
-      isDanger: true,
-    ).then((confirmed) {
-      if (confirmed) {
-        context.read<QuizCubit>().answerQuestion(null);
-      }
-    });
+  void _handleStatusChange(
+      BuildContext context, QuizStatus status, WidgetRef ref) {
+    switch (status) {
+      case QuizStatus.completed:
+        _showResultModal(context, ref);
+        break;
+      case QuizStatus.exited:
+        Navigator.of(context).pop();
+        break;
+      default:
+        // Do nothing for other status values
+        break;
+    }
   }
 
-  /// Hiển thị hộp thoại xác nhận khi thoát khỏi bài kiểm tra
-  void _confirmExit(BuildContext context) {
+  void _confirmExit(BuildContext context, WidgetRef ref) {
     QlzModal.showConfirmation(
       context: context,
       title: 'Thoát bài kiểm tra?',
@@ -167,16 +136,18 @@ class _QuizScreenState extends State<QuizScreen> {
       isDanger: true,
     ).then((confirmed) {
       if (confirmed) {
-        context.read<QuizCubit>().exitQuiz();
+        ref.read(quizProvider.notifier).exitQuiz();
       }
     });
   }
 
-  /// Hiển thị modal kết quả khi hoàn thành bài kiểm tra
-  void _showResultModal(BuildContext context, QuizState state) {
-    // Lấy thông báo kết quả dựa vào điểm số
+  void _showResultModal(BuildContext context, WidgetRef ref) {
+    // Sử dụng provider để lấy kết quả
+    final quizService = ref.read(quizServiceProvider);
+    final state = ref.read(quizProvider);
+
     final (resultMessage, resultColor) =
-        _quizService.getResultMessage(state.score);
+        quizService.getResultMessage(state.score);
 
     QlzModal.showBottomSheet(
       context: context,
@@ -184,11 +155,10 @@ class _QuizScreenState extends State<QuizScreen> {
       enableDrag: false,
       title: 'Kết quả bài kiểm tra',
       height: MediaQuery.of(context).size.height * 0.8,
-      child: QuizResultContent(
-        state: state,
+      child: QuizResultConsumer(
         onRestartPressed: () {
           Navigator.of(context).pop();
-          context.read<QuizCubit>().restartQuiz();
+          ref.read(quizProvider.notifier).restartQuiz();
         },
         onFinishPressed: () {
           Navigator.of(context).pop();
@@ -198,5 +168,84 @@ class _QuizScreenState extends State<QuizScreen> {
         resultColor: resultColor,
       ),
     );
+  }
+}
+
+// -------------------- OPTIMIZED SUB-COMPONENTS --------------------
+
+// Answers section that only rebuilds when answers or question changes
+class QuizAnswersView extends ConsumerWidget {
+  const QuizAnswersView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Sử dụng provider có sẵn để lấy câu hỏi hiện tại
+    final currentQuestion = ref.watch(currentQuestionProvider);
+    if (currentQuestion == null) return const SizedBox.shrink();
+
+    // Lấy các state cần thiết
+    final userAnswer =
+        ref.watch(quizProvider.select((s) => s.currentUserAnswer));
+    final hasAnswered =
+        ref.watch(quizProvider.select((s) => s.hasAnsweredCurrentQuestion));
+    final showCorrectAnswers =
+        ref.watch(quizProvider.select((s) => s.showCorrectAnswers));
+
+    // Lấy service để hiển thị nhãn
+    final quizService = ref.read(quizServiceProvider);
+
+    return QuizAnswersSection(
+      quizType: currentQuestion.quizType,
+      questionTypeLabel:
+          quizService.getQuestionTypeLabel(currentQuestion.quizType),
+      answers: currentQuestion.answers,
+      userAnswer: userAnswer,
+      correctAnswer: currentQuestion.correctAnswer,
+      hasAnswered: hasAnswered,
+      showCorrectAnswers: showCorrectAnswers,
+      onAnswerSelected: (answer) =>
+          ref.read(quizProvider.notifier).answerQuestion(answer),
+    );
+  }
+}
+
+// Footer component that only rebuilds when relevant data changes
+class QuizFooterView extends ConsumerWidget {
+  const QuizFooterView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentQuestionIndex =
+        ref.watch(quizProvider.select((s) => s.currentQuestionIndex));
+    final totalQuestions =
+        ref.watch(quizProvider.select((s) => s.questions.length));
+    final hasAnswered =
+        ref.watch(quizProvider.select((s) => s.hasAnsweredCurrentQuestion));
+
+    return QuizFooter(
+      currentQuestionIndex: currentQuestionIndex,
+      totalQuestions: totalQuestions,
+      hasAnswered: hasAnswered,
+      onPreviousPressed: () =>
+          ref.read(quizProvider.notifier).previousQuestion(),
+      onNextPressed: () => ref.read(quizProvider.notifier).nextQuestion(),
+      onSkipPressed: () => _confirmSkipQuestion(context, ref),
+    );
+  }
+
+  void _confirmSkipQuestion(BuildContext context, WidgetRef ref) {
+    QlzModal.showConfirmation(
+      context: context,
+      title: 'Bỏ qua câu hỏi?',
+      message:
+          'Bạn chưa trả lời câu hỏi này. Bạn có chắc chắn muốn bỏ qua không?',
+      confirmText: 'Bỏ qua',
+      cancelText: 'Tiếp tục làm',
+      isDanger: true,
+    ).then((confirmed) {
+      if (confirmed) {
+        ref.read(quizProvider.notifier).answerQuestion(null);
+      }
+    });
   }
 }

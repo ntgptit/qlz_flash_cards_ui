@@ -5,6 +5,8 @@ import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/flashcard_module.dart';
 import 'package:qlz_flash_cards_ui/features/library/library_module.dart';
 import 'package:qlz_flash_cards_ui/features/module/module_module.dart';
+import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_settings.dart';
+import 'package:qlz_flash_cards_ui/features/quiz/quiz_module.dart';
 
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
@@ -82,38 +84,38 @@ class RouteBuilder {
       );
     },
 
-    // AppRoutes.quizSettings: (params) {
-    //   final moduleId = params.getString('moduleId', '');
-    //   final moduleName = params.getString('moduleName', 'Bài kiểm tra');
-    //   final flashcards = params.getFlashcards('flashcards');
+    AppRoutes.quizSettings: (params) {
+      final moduleId = params.getString('moduleId', '');
+      final moduleName = params.getString('moduleName', 'Bài kiểm tra');
+      final flashcards = params.getFlashcards('flashcards');
 
-    //   return QuizModule.provideRiverpodSettingsScreen(
-    //     moduleId: moduleId,
-    //     moduleName: moduleName,
-    //     flashcards: flashcards,
-    //   );
-    // },
+      return QuizModule.provideRiverpodSettingsScreen(
+        moduleId: moduleId,
+        moduleName: moduleName,
+        flashcards: flashcards,
+      );
+    },
 
-    // AppRoutes.quiz: (params) {
-    //   final quizData = {
-    //     'quizType':
-    //         params.getEnum('quizType', QuizType.values, QuizType.values.first),
-    //     'difficulty': params.getEnum(
-    //         'difficulty', QuizDifficulty.values, QuizDifficulty.values.first),
-    //     'flashcards': params.getFlashcards('flashcards'),
-    //     'moduleId': params.getString('moduleId', ''),
-    //     'moduleName': params.getString('moduleName', ''),
-    //     'questionCount': params.getInt('questionCount', 10),
-    //     'shuffleQuestions': params.getBool('shuffleQuestions', true),
-    //     'showCorrectAnswers': params.getBool('showCorrectAnswers', true),
-    //     'enableTimer': params.getBool('enableTimer', false),
-    //     'timePerQuestion': params.getInt('timePerQuestion', 30),
-    //   };
+    AppRoutes.quiz: (params) {
+      final quizData = {
+        'quizType':
+            params.getEnum('quizType', QuizType.values, QuizType.values.first),
+        'difficulty': params.getEnum(
+            'difficulty', QuizDifficulty.values, QuizDifficulty.values.first),
+        'flashcards': params.getFlashcards('flashcards'),
+        'moduleId': params.getString('moduleId', ''),
+        'moduleName': params.getString('moduleName', ''),
+        'questionCount': params.getInt('questionCount', 10),
+        'shuffleQuestions': params.getBool('shuffleQuestions', true),
+        'showCorrectAnswers': params.getBool('showCorrectAnswers', true),
+        'enableTimer': params.getBool('enableTimer', false),
+        'timePerQuestion': params.getInt('timePerQuestion', 30),
+      };
 
-    //   return QuizModule.provideRiverpodQuizScreen(
-    //     quizData: quizData,
-    //   );
-    // },
+      return QuizModule.provideRiverpodQuizScreen(
+        quizData: quizData,
+      );
+    },
 
     AppRoutes.profile: (_) => const ProfileScreen(),
 
@@ -196,28 +198,179 @@ class RouteBuilder {
   }
 
   static Widget _buildErrorScreen(String routeName) {
+    // Log lỗi chi tiết vào console
+    debugPrint('[${DateTime.now().toIso8601String()}] '
+        'NAVIGATION ERROR:\n'
+        'Route: "$routeName"\n'
+        'Stack: ${StackTrace.current.toString().split('\n').take(3).join('\n')}');
+
     return Scaffold(
-      appBar:
-          AppBar(title: const Text('Route Error'), backgroundColor: Colors.red),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 80, color: Colors.red),
-            const SizedBox(height: 16),
-            Text('Không tìm thấy route "$routeName"',
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            const Text('Vui lòng kiểm tra lại cấu hình navigation.'),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => Navigator.canPop(RouteLogger.context)
-                  ? Navigator.pop(RouteLogger.context)
-                  : null,
-              child: const Text('Quay lại'),
+      backgroundColor: Colors.grey[50],
+      body: SafeArea(
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.redAccent.withOpacity(0.05),
+                Colors.blueAccent.withOpacity(0.05),
+              ],
             ),
-          ],
+          ),
+          child: Center(
+            child: SingleChildScrollView(
+              child: Card(
+                elevation: 12,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                margin: const EdgeInsets.all(20),
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Animated error icon with bounce effect
+                      TweenAnimationBuilder(
+                        tween: Tween<double>(begin: 0, end: 1),
+                        duration: const Duration(milliseconds: 1000),
+                        curve: Curves.elasticOut,
+                        builder: (context, value, child) {
+                          return Transform.scale(
+                            scale: value,
+                            child: child,
+                          );
+                        },
+                        child: const Icon(
+                          Icons.warning_amber_rounded,
+                          size: 100,
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // Tiêu đề thân thiện hơn
+                      Text(
+                        'Ôi không! Có gì đó sai rồi',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.grey[900],
+                          letterSpacing: 0.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      // Thông tin lỗi với style rõ ràng
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.red[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: Colors.redAccent.withOpacity(0.3)),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              'Không tìm thấy: ',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '"$routeName"',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.redAccent,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      // Hướng dẫn người dùng
+                      Text(
+                        'Đừng lo! Bạn có thể:\n'
+                        '1. Kiểm tra lại đường dẫn\n'
+                        '2. Quay lại màn hình trước\n'
+                        '3. Liên hệ hỗ trợ nếu cần',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                          height: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
+                      // Các nút hành động
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Nút Quay lại
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.redAccent,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 2,
+                            ),
+                            onPressed: () =>
+                                Navigator.canPop(RouteLogger.context)
+                                    ? Navigator.pop(RouteLogger.context)
+                                    : null,
+                            icon:
+                                const Icon(Icons.arrow_back_ios_new, size: 18),
+                            label: const Text(
+                              'Quay lại',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          // Nút Trang chủ
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.blueAccent,
+                              side: BorderSide(
+                                  color: Colors.blueAccent.withOpacity(0.5)),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: () {
+                              Navigator.popUntil(
+                                RouteLogger.context,
+                                (route) => route.isFirst,
+                              );
+                            },
+                            icon: const Icon(Icons.home_outlined, size: 18),
+                            label: const Text(
+                              'Trang chủ',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

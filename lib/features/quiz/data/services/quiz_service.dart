@@ -1,35 +1,41 @@
-// lib/features/quiz/service/quiz_service.dart
-
 import 'dart:math';
-import 'dart:ui';
 
-import 'package:flutter/material.dart' show Colors;
+import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_answer.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_question.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_settings.dart';
 
-/// Service chịu trách nhiệm tạo và quản lý các câu hỏi quiz
 class QuizService {
-  /// Chọn flashcards để tạo câu hỏi
+  // Tối ưu hóa: Sử dụng thuật toán Fisher-Yates cho hiệu quả cao
+  void _efficientShuffle<T>(List<T> list) {
+    final random = Random();
+    for (var i = list.length - 1; i > 0; i--) {
+      final j = random.nextInt(i + 1);
+      // Swap
+      final temp = list[i];
+      list[i] = list[j];
+      list[j] = temp;
+    }
+  }
+
+  // Lựa chọn flashcards theo số lượng và trộn nếu cần thiết
   List<Flashcard> selectFlashcards(
       List<Flashcard> flashcards, int count, bool shuffle) {
     if (flashcards.isEmpty) return [];
 
-    // Giới hạn số lượng flashcards
     final effectiveCount = min(count, flashcards.length);
 
     if (shuffle) {
-      // Tạo một bản sao để không ảnh hưởng đến danh sách gốc
       final shuffled = List<Flashcard>.from(flashcards);
-      shuffled.shuffle();
+      _efficientShuffle(shuffled);
       return shuffled.take(effectiveCount).toList();
     } else {
       return flashcards.take(effectiveCount).toList();
     }
   }
 
-  /// Tạo danh sách câu hỏi từ flashcards
+  // Tạo danh sách câu hỏi từ các flashcard đã chọn
   List<QuizQuestion> createQuestions(
     List<Flashcard> selectedFlashcards,
     QuizType quizType,
@@ -37,7 +43,7 @@ class QuizService {
     List<Flashcard> allFlashcards,
   ) {
     return selectedFlashcards.map((flashcard) {
-      return _createQuestionFromFlashcard(
+      return createQuestionFromFlashcard(
         flashcard: flashcard,
         quizType: quizType,
         difficulty: difficulty,
@@ -46,14 +52,13 @@ class QuizService {
     }).toList();
   }
 
-  /// Tạo một câu hỏi từ flashcard
-  QuizQuestion _createQuestionFromFlashcard({
+  // Tạo một câu hỏi từ flashcard - phương thức public để dùng với provider
+  QuizQuestion createQuestionFromFlashcard({
     required Flashcard flashcard,
     required QuizType quizType,
     required QuizDifficulty difficulty,
     required List<Flashcard> allFlashcards,
   }) {
-    // Tạo question và answers tùy theo loại câu hỏi
     return switch (quizType) {
       QuizType.multipleChoice =>
         _createMultipleChoiceQuestion(flashcard, difficulty, allFlashcards),
@@ -65,37 +70,45 @@ class QuizService {
     };
   }
 
-  /// Tạo câu hỏi dạng trắc nghiệm
+  // Tối ưu hóa: Giảm số lần shuffle và tái sử dụng logic hiệu quả
   QuizQuestion _createMultipleChoiceQuestion(Flashcard flashcard,
       QuizDifficulty difficulty, List<Flashcard> allFlashcards) {
-    // Số lượng lựa chọn tùy theo độ khó
     final optionsCount = switch (difficulty) {
       QuizDifficulty.easy => 3,
       QuizDifficulty.medium => 4,
       QuizDifficulty.hard => 5,
     };
 
-    // Tạo câu hỏi
     final question = 'Ý nghĩa của "${flashcard.term}" là gì?';
-
-    // Đáp án đúng
     final correctAnswer = QuizAnswer(
       id: '0',
       text: flashcard.definition,
       isCorrect: true,
     );
 
-    // Tạo các đáp án sai từ các flashcard khác
+    // Lọc và shuffle một lần duy nhất
     final otherFlashcards =
         allFlashcards.where((card) => card.id != flashcard.id).toList();
 
-    // Có thể không đủ flashcards khác để tạo đáp án sai
+    // Xử lý trường hợp không đủ flashcards
+    if (otherFlashcards.isEmpty) {
+      // Trả về câu hỏi chỉ có 1 đáp án đúng
+      return QuizQuestion(
+        id: flashcard.id,
+        question: question,
+        answers: [correctAnswer],
+        correctAnswer: correctAnswer,
+        sourceFlashcard: flashcard,
+        quizType: QuizType.multipleChoice,
+        difficulty: difficulty,
+      );
+    }
+
+    // Shuffle và chọn số lượng cần thiết
+    _efficientShuffle(otherFlashcards);
     final wrongAnswersCount = min(optionsCount - 1, otherFlashcards.length);
 
-    // Trộn danh sách để chọn ngẫu nhiên
-    otherFlashcards.shuffle();
-
-    // Tạo danh sách đáp án sai
+    // Tạo wrong answers
     final wrongAnswers = otherFlashcards
         .take(wrongAnswersCount)
         .map((card) => QuizAnswer(
@@ -105,11 +118,9 @@ class QuizService {
             ))
         .toList();
 
-    // Kết hợp đáp án đúng và đáp án sai
-    final allAnswers = [correctAnswer, ...wrongAnswers];
-
-    // Trộn các đáp án
-    allAnswers.shuffle();
+    // Tạo danh sách tất cả câu trả lời hiệu quả hơn
+    final allAnswers = <QuizAnswer>[correctAnswer, ...wrongAnswers];
+    _efficientShuffle(allAnswers);
 
     return QuizQuestion(
       id: flashcard.id,
@@ -122,19 +133,15 @@ class QuizService {
     );
   }
 
-  /// Tạo câu hỏi dạng đúng/sai
   QuizQuestion _createTrueFalseQuestion(
       Flashcard flashcard, QuizDifficulty difficulty) {
-    // Quyết định ngẫu nhiên xem câu hỏi là đúng hay sai
     final random = Random();
     final isCorrectStatement = random.nextBool();
 
-    // Nội dung câu hỏi
     final statement = isCorrectStatement
         ? '${flashcard.term} có nghĩa là ${flashcard.definition}.'
         : '${flashcard.term} có nghĩa là "${_getRandomWrongDefinition(flashcard)}"';
 
-    // Đáp án
     final trueAnswer = QuizAnswer(
       id: 'true',
       text: 'Đúng',
@@ -147,7 +154,6 @@ class QuizService {
       isCorrect: !isCorrectStatement,
     );
 
-    // Đáp án đúng dựa vào isCorrectStatement
     final correctAnswer = isCorrectStatement ? trueAnswer : falseAnswer;
 
     return QuizQuestion(
@@ -161,27 +167,22 @@ class QuizService {
     );
   }
 
-  /// Tạo câu hỏi dạng điền vào chỗ trống
   QuizQuestion _createFillInBlankQuestion(
       Flashcard flashcard, QuizDifficulty difficulty) {
-    // Tạo câu hỏi dạng điền vào chỗ trống
     final question = 'Điền ý nghĩa của từ "${flashcard.term}": ';
 
-    // Đáp án đúng
     final correctAnswer = QuizAnswer(
       id: flashcard.id,
       text: flashcard.definition,
       isCorrect: true,
     );
 
-    // Tạo một số đáp án gợi ý khác (phụ thuộc vào độ khó)
     final suggestedAnswersCount = switch (difficulty) {
       QuizDifficulty.easy => 3,
       QuizDifficulty.medium => 2,
       QuizDifficulty.hard => 0, // Không có gợi ý cho độ khó cao
     };
 
-    // Tạo các gợi ý ngẫu nhiên
     final wrongAnswers = List.generate(
       suggestedAnswersCount,
       (index) => QuizAnswer(
@@ -191,9 +192,8 @@ class QuizService {
       ),
     );
 
-    // Kết hợp đáp án
-    final allAnswers = [correctAnswer, ...wrongAnswers];
-    allAnswers.shuffle();
+    final allAnswers = <QuizAnswer>[correctAnswer, ...wrongAnswers];
+    _efficientShuffle(allAnswers);
 
     return QuizQuestion(
       id: flashcard.id,
@@ -206,33 +206,40 @@ class QuizService {
     );
   }
 
-  /// Tạo câu hỏi dạng ghép đôi
   QuizQuestion _createMatchingQuestion(Flashcard flashcard,
       QuizDifficulty difficulty, List<Flashcard> allFlashcards) {
-    // Câu hỏi ghép từ với định nghĩa của nó
     final question = 'Tìm định nghĩa đúng cho từ: ${flashcard.term}';
 
-    // Số lượng lựa chọn tùy thuộc vào độ khó
     final optionsCount = switch (difficulty) {
       QuizDifficulty.easy => 3,
       QuizDifficulty.medium => 4,
       QuizDifficulty.hard => 5,
     };
 
-    // Đáp án đúng
     final correctAnswer = QuizAnswer(
       id: flashcard.id,
       text: flashcard.definition,
       isCorrect: true,
     );
 
-    // Tạo các lựa chọn sai từ các flashcard khác
+    // Lọc và shuffle một lần duy nhất
     final otherFlashcards =
         allFlashcards.where((card) => card.id != flashcard.id).toList();
 
-    final wrongAnswersCount = min(optionsCount - 1, otherFlashcards.length);
+    if (otherFlashcards.isEmpty) {
+      return QuizQuestion(
+        id: flashcard.id,
+        question: question,
+        answers: [correctAnswer],
+        correctAnswer: correctAnswer,
+        sourceFlashcard: flashcard,
+        quizType: QuizType.matching,
+        difficulty: difficulty,
+      );
+    }
 
-    otherFlashcards.shuffle();
+    _efficientShuffle(otherFlashcards);
+    final wrongAnswersCount = min(optionsCount - 1, otherFlashcards.length);
 
     final wrongAnswers = otherFlashcards
         .take(wrongAnswersCount)
@@ -243,9 +250,8 @@ class QuizService {
             ))
         .toList();
 
-    // Kết hợp đáp án
-    final allAnswers = [correctAnswer, ...wrongAnswers];
-    allAnswers.shuffle();
+    final allAnswers = <QuizAnswer>[correctAnswer, ...wrongAnswers];
+    _efficientShuffle(allAnswers);
 
     return QuizQuestion(
       id: flashcard.id,
@@ -258,26 +264,20 @@ class QuizService {
     );
   }
 
-  /// Tạo câu hỏi dạng flashcard
   QuizQuestion _createFlashcardQuestion(
       Flashcard flashcard, QuizDifficulty difficulty) {
-    // Đơn giản chỉ hiển thị flashcard và yêu cầu người dùng nhớ định nghĩa
     final question = flashcard.term;
 
-    // Đáp án đúng
     final correctAnswer = QuizAnswer(
       id: flashcard.id,
       text: flashcard.definition,
       isCorrect: true,
     );
 
-    // Flashcard chỉ có một đáp án (người dùng tự đánh giá)
-    final answers = [correctAnswer];
-
     return QuizQuestion(
       id: flashcard.id,
       question: question,
-      answers: answers,
+      answers: [correctAnswer],
       correctAnswer: correctAnswer,
       sourceFlashcard: flashcard,
       quizType: QuizType.flashcards,
@@ -285,11 +285,9 @@ class QuizService {
     );
   }
 
-  /// Helper để tạo định nghĩa sai ngẫu nhiên
   String _getRandomWrongDefinition(Flashcard flashcard, {int? seed}) {
-    // Trong thực tế, có thể sử dụng thuật toán phức tạp hơn hoặc dữ liệu từ API
-    // Ở đây chỉ đơn giản là thêm "không phải" vào trước định nghĩa
     final random = seed != null ? Random(seed) : Random();
+
     final prefixes = [
       'không phải ',
       'trái ngược với ',
@@ -299,12 +297,11 @@ class QuizService {
     return '${prefixes[random.nextInt(prefixes.length)]}${flashcard.definition}';
   }
 
-  /// Tính điểm và số câu trả lời đúng
+  // Tính điểm dựa trên số câu trả lời đúng
   (double, int) calculateScore(
       List<QuizQuestion> questions, List<QuizAnswer?> userAnswers) {
     int correctCount = 0;
 
-    // Đếm số câu trả lời đúng
     for (int i = 0; i < questions.length; i++) {
       if (i < userAnswers.length && userAnswers[i] != null) {
         final userAnswer = userAnswers[i]!;
@@ -316,14 +313,12 @@ class QuizService {
       }
     }
 
-    // Tính điểm (tỷ lệ phần trăm)
     final score =
         questions.isEmpty ? 0.0 : (correctCount / questions.length) * 100;
-
     return (score, correctCount);
   }
 
-  /// Lấy thông báo kết quả dựa vào điểm số
+  // Lấy thông báo kết quả dựa trên điểm số
   (String, Color) getResultMessage(double percentage) {
     if (percentage >= 90) {
       return ('Xuất sắc!', Colors.green);
@@ -338,7 +333,7 @@ class QuizService {
     }
   }
 
-  /// Lấy nhãn loại câu hỏi
+  // Lấy nhãn loại câu hỏi
   String getQuestionTypeLabel(QuizType quizType) {
     return switch (quizType) {
       QuizType.multipleChoice => 'Chọn đáp án đúng:',
