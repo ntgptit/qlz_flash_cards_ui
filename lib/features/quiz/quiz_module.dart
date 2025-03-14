@@ -2,8 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:qlz_flash_cards_ui/core/providers/app_providers.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_settings.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/data/services/quiz_service.dart';
@@ -37,24 +35,24 @@ final class QuizModule {
   }
 
   /// Cung cấp màn hình thiết lập quiz với Riverpod
-  static Widget provideRiverpodSettingsScreen({
-    required WidgetRef ref,
-    required String moduleId,
-    required String moduleName,
-    required List<Flashcard> flashcards,
-  }) {
-    final quizSettingsCubit = ref.read(quizSettingsCubitProvider);
-    quizSettingsCubit.initialize(flashcards.length);
+  // static Widget provideRiverpodSettingsScreen({
+  //   required WidgetRef ref,
+  //   required String moduleId,
+  //   required String moduleName,
+  //   required List<Flashcard> flashcards,
+  // }) {
+  //   final quizSettingsCubit = ref.read(quizSettingsCubitProvider);
+  //   quizSettingsCubit.initialize(flashcards.length);
 
-    return BlocProvider.value(
-      value: quizSettingsCubit,
-      child: QuizScreenSettings(
-        moduleId: moduleId,
-        moduleName: moduleName,
-        flashcards: flashcards,
-      ),
-    );
-  }
+  //   return BlocProvider.value(
+  //     value: quizSettingsCubit,
+  //     child: QuizScreenSettings(
+  //       moduleId: moduleId,
+  //       moduleName: moduleName,
+  //       flashcards: flashcards,
+  //     ),
+  //   );
+  // }
 
   /// Cung cấp màn hình quiz
   static Widget provideQuizScreen({
@@ -73,20 +71,20 @@ final class QuizModule {
   }
 
   /// Cung cấp màn hình quiz với Riverpod
-  static Widget provideRiverpodQuizScreen({
-    required WidgetRef ref,
-    required Map<String, dynamic> quizData,
-  }) {
-    final quizCubit = ref.read(quizCubitProvider);
+  // static Widget provideRiverpodQuizScreen({
+  //   required WidgetRef ref,
+  //   required Map<String, dynamic> quizData,
+  // }) {
+  //   final quizCubit = ref.read(quizCubitProvider);
 
-    // Khởi tạo Cubit với dữ liệu quiz
-    _initializeQuizCubit(quizCubit, quizData);
+  //   // Khởi tạo Cubit với dữ liệu quiz
+  //   _initializeQuizCubit(quizCubit, quizData);
 
-    return BlocProvider.value(
-      value: quizCubit,
-      child: const QuizScreen(),
-    );
-  }
+  //   return BlocProvider.value(
+  //     value: quizCubit,
+  //     child: const QuizScreen(),
+  //   );
+  // }
 
   // Helper method để khởi tạo QuizCubit, giảm code trùng lặp
   static void _initializeQuizCubit(

@@ -16,7 +16,7 @@ import 'package:qlz_flash_cards_ui/shared/widgets/layout/qlz_modal.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/study/qlz_flashcard.dart';
 
-class FlashcardStudyModeScreen extends ConsumerWidget {
+class FlashcardStudyModeScreen extends ConsumerStatefulWidget {
   final List<Flashcard> flashcards;
   final int initialIndex;
 
@@ -27,13 +27,28 @@ class FlashcardStudyModeScreen extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Initialize flashcards when the screen is first built
-    ref.read(flashcardProvider.notifier).initializeFlashcards(
-          flashcards,
-          initialIndex.clamp(0, flashcards.isEmpty ? 0 : flashcards.length - 1),
-        );
+  ConsumerState<FlashcardStudyModeScreen> createState() =>
+      _FlashcardStudyModeScreenState();
+}
 
+class _FlashcardStudyModeScreenState
+    extends ConsumerState<FlashcardStudyModeScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    // Để tránh gọi ref trong initState, ta sử dụng addPostFrameCallback
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(flashcardProvider.notifier).initializeFlashcards(
+            widget.flashcards,
+            widget.initialIndex.clamp(0,
+                widget.flashcards.isEmpty ? 0 : widget.flashcards.length - 1),
+          );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return const FlashcardStudyModeView();
   }
 }

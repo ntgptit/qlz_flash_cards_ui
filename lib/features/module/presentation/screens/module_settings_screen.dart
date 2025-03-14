@@ -1,202 +1,190 @@
 // lib/features/module/presentation/screens/module_settings_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
-import 'package:qlz_flash_cards_ui/features/module/logic/cubit/module_settings_cubit.dart';
-import 'package:qlz_flash_cards_ui/features/module/logic/states/module_settings_state.dart';
+import 'package:qlz_flash_cards_ui/features/module/presentation/providers/module_settings_provider.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/buttons/qlz_button.dart';
-import 'package:qlz_flash_cards_ui/shared/widgets/cards/qlz_card.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/layout/qlz_modal.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
 
-class ModuleSettingsScreen extends StatefulWidget {
+class ModuleSettingsScreen extends ConsumerWidget {
   final String moduleId;
+
   const ModuleSettingsScreen({
     super.key,
     this.moduleId = 'new', // Default for new modules
   });
-  @override
-  State<ModuleSettingsScreen> createState() => _ModuleSettingsScreenState();
-}
-
-class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
-  @override
-  void initState() {
-    super.initState();
-  }
 
   @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<ModuleSettingsCubit, ModuleSettingsState>(
-      builder: (context, state) {
-        if (state.status == ModuleSettingsStatus.loading) {
-          return const Scaffold(
-            backgroundColor: Color(0xFF0A092D),
-            appBar: QlzAppBar(
-              title: 'Cài đặt tùy chọn',
-            ),
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
-        }
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stateNotifier = ref.watch(moduleSettingsProvider(moduleId).notifier);
+    final state = ref.watch(moduleSettingsProvider(moduleId));
 
-        if (state.status == ModuleSettingsStatus.failure) {
-          return Scaffold(
-            backgroundColor: const Color(0xFF0A092D),
-            appBar: const QlzAppBar(
-              title: 'Cài đặt tùy chọn',
-            ),
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline,
-                      color: AppColors.error, size: 48),
-                  const SizedBox(height: 16),
-                  Text(
-                    state.errorMessage ?? 'Đã xảy ra lỗi',
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                  const SizedBox(height: 16),
-                  QlzButton(
-                    label: 'Thử lại',
-                    onPressed: () {
-                      HapticFeedback.mediumImpact();
-                      context.read<ModuleSettingsCubit>().loadSettings();
-                    },
-                  ),
-                ],
+    if (state.status == ModuleSettingsStatus.loading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0A092D),
+        appBar: QlzAppBar(
+          title: 'Cài đặt tùy chọn',
+        ),
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (state.status == ModuleSettingsStatus.failure) {
+      return Scaffold(
+        backgroundColor: const Color(0xFF0A092D),
+        appBar: const QlzAppBar(
+          title: 'Cài đặt tùy chọn',
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: AppColors.error, size: 48),
+              const SizedBox(height: 16),
+              Text(
+                state.errorMessage ?? 'Đã xảy ra lỗi',
+                style: const TextStyle(color: Colors.white),
               ),
-            ),
-          );
-        }
-
-        final settings = state.settings;
-        return Scaffold(
-          backgroundColor: const Color(0xFF0A092D),
-          appBar: const QlzAppBar(
-            title: 'Cài đặt tùy chọn',
-          ),
-          body: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 24),
-                  const Text(
-                    'NGÔN NGỮ',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildSettingSection([
-                    _buildLanguageRow(
-                      'Thuật ngữ',
-                      settings.termLanguage,
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                      },
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Divider(color: Colors.white24, height: 1),
-                    ),
-                    _buildLanguageRow(
-                      'Định nghĩa',
-                      settings.definitionLanguage,
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                      },
-                    ),
-                  ]),
-                  const SizedBox(height: 32),
-                  const Text(
-                    'TÙY CHỌN',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildSettingSection([
-                    _buildSwitchRow(
-                      'Gợi ý tự động',
-                      value: settings.autoSuggest,
-                      onChanged: (value) {
-                        HapticFeedback.selectionClick();
-                        context
-                            .read<ModuleSettingsCubit>()
-                            .updateAutoSuggest(value);
-                      },
-                    ),
-                  ]),
-                  const SizedBox(height: 32),
-                  const Text(
-                    'QUYỀN RIÊNG TƯ',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildSettingSection([
-                    _buildPermissionRow(
-                      'Ai có thể xem',
-                      settings.viewPermission,
-                      ['Mọi người', 'Chỉ tôi'],
-                      (value) {
-                        context
-                            .read<ModuleSettingsCubit>()
-                            .updateViewPermission(value);
-                      },
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Divider(color: Colors.white24, height: 1),
-                    ),
-                    _buildPermissionRow(
-                      'Ai có thể sửa',
-                      settings.editPermission,
-                      ['Mọi người', 'Chỉ tôi'],
-                      (value) {
-                        context
-                            .read<ModuleSettingsCubit>()
-                            .updateEditPermission(value);
-                      },
-                    ),
-                  ]),
-                  if (widget.moduleId != 'new') ...[
-                    const SizedBox(height: 32),
-                    QlzButton.danger(
-                      label: 'Xóa học phần',
-                      icon: Icons.delete_outline,
-                      onPressed: () {
-                        HapticFeedback.heavyImpact();
-                        _showDeleteConfirmation();
-                      },
-                      isFullWidth: true,
-                    ),
-                  ],
-                  const SizedBox(height: 32),
-                ],
+              const SizedBox(height: 16),
+              QlzButton(
+                label: 'Thử lại',
+                onPressed: () {
+                  HapticFeedback.mediumImpact();
+                  stateNotifier.loadSettings();
+                },
               ),
-            ),
+            ],
           ),
-        );
-      },
+        ),
+      );
+    }
+
+    final settings = state.settings;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A092D),
+      appBar: const QlzAppBar(
+        title: 'Cài đặt tùy chọn',
+      ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 24),
+              const Text(
+                'NGÔN NGỮ',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildSettingSection([
+                _buildLanguageRow(
+                  context,
+                  'Thuật ngữ',
+                  settings.termLanguage,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                  },
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Divider(color: Colors.white24, height: 1),
+                ),
+                _buildLanguageRow(
+                  context,
+                  'Định nghĩa',
+                  settings.definitionLanguage,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                  },
+                ),
+              ]),
+              const SizedBox(height: 32),
+              const Text(
+                'TÙY CHỌN',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildSettingSection([
+                _buildSwitchRow(
+                  'Gợi ý tự động',
+                  value: settings.autoSuggest,
+                  onChanged: (value) {
+                    HapticFeedback.selectionClick();
+                    stateNotifier.updateAutoSuggest(value);
+                  },
+                ),
+              ]),
+              const SizedBox(height: 32),
+              const Text(
+                'QUYỀN RIÊNG TƯ',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildSettingSection([
+                _buildPermissionRow(
+                  context,
+                  'Ai có thể xem',
+                  settings.viewPermission,
+                  ['Mọi người', 'Chỉ tôi'],
+                  (value) {
+                    stateNotifier.updateViewPermission(value);
+                  },
+                ),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Divider(color: Colors.white24, height: 1),
+                ),
+                _buildPermissionRow(
+                  context,
+                  'Ai có thể sửa',
+                  settings.editPermission,
+                  ['Mọi người', 'Chỉ tôi'],
+                  (value) {
+                    stateNotifier.updateEditPermission(value);
+                  },
+                ),
+              ]),
+              if (moduleId != 'new') ...[
+                const SizedBox(height: 32),
+                QlzButton.danger(
+                  label: 'Xóa học phần',
+                  icon: Icons.delete_outline,
+                  onPressed: () {
+                    HapticFeedback.heavyImpact();
+                    _showDeleteConfirmation(context);
+                  },
+                  isFullWidth: true,
+                ),
+              ],
+              const SizedBox(height: 32),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  void _showDeleteConfirmation() {
+  void _showDeleteConfirmation(BuildContext context) {
     QlzModal.showConfirmation(
       context: context,
       title: 'Xóa học phần',
@@ -213,9 +201,11 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
   }
 
   Widget _buildSettingSection(List<Widget> children) {
-    return QlzCard(
-      padding: EdgeInsets.zero,
-      borderRadius: BorderRadius.circular(12),
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF12113A),
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Column(
         children: children,
       ),
@@ -223,6 +213,7 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
   }
 
   Widget _buildLanguageRow(
+    BuildContext context,
     String title,
     String value, {
     VoidCallback? onTap,
@@ -277,6 +268,7 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
   }
 
   Widget _buildPermissionRow(
+    BuildContext context,
     String title,
     String value,
     List<String> options,
@@ -309,7 +301,8 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
                   color: Colors.white54, size: 20),
               onPressed: () {
                 HapticFeedback.selectionClick();
-                _showPermissionOptions(title, value, options, onChanged);
+                _showPermissionOptions(
+                    context, title, value, options, onChanged);
               },
             ),
           ],
@@ -317,12 +310,13 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
       ),
       onTap: () {
         HapticFeedback.selectionClick();
-        _showPermissionOptions(title, value, options, onChanged);
+        _showPermissionOptions(context, title, value, options, onChanged);
       },
     );
   }
 
   void _showPermissionOptions(
+    BuildContext context,
     String title,
     String currentValue,
     List<String> options,

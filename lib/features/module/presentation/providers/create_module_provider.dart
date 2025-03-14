@@ -1,16 +1,82 @@
-// C:/Users/ntgpt/OneDrive/workspace/qlz_flash_cards_ui/lib/features/module/logic/cubit/create_module_cubit.dart
-import 'package:flutter_bloc/flutter_bloc.dart';
+// lib/features/module/presentation/providers/create_module_provider.dart
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qlz_flash_cards_ui/core/providers/app_providers.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 import 'package:qlz_flash_cards_ui/features/module/data/models/module_settings_model.dart';
 import 'package:qlz_flash_cards_ui/features/module/data/models/study_module_model.dart';
 import 'package:qlz_flash_cards_ui/features/module/data/repositories/module_repository.dart';
-import 'package:qlz_flash_cards_ui/features/module/logic/states/create_module_state.dart';
 
-class CreateModuleCubit extends Cubit<CreateModuleState> {
+// State definition for creating module
+enum CreateModuleStatus { initial, submitting, success, failure }
+
+class CreateModuleState {
+  final String title;
+  final String description;
+  final List<Flashcard> flashcards;
+  final Map<int, String?> termErrors;
+  final Map<int, String?> definitionErrors;
+  final String? titleError;
+  final CreateModuleStatus status;
+  final String? errorMessage;
+  final ModuleSettings settings;
+
+  const CreateModuleState({
+    this.title = '',
+    this.description = '',
+    this.flashcards = const [],
+    this.termErrors = const {},
+    this.definitionErrors = const {},
+    this.titleError,
+    this.status = CreateModuleStatus.initial,
+    this.errorMessage,
+    this.settings = const ModuleSettings(),
+  });
+
+  CreateModuleState copyWith({
+    String? title,
+    String? description,
+    List<Flashcard>? flashcards,
+    Map<int, String?>? termErrors,
+    Map<int, String?>? definitionErrors,
+    String? titleError,
+    CreateModuleStatus? status,
+    String? errorMessage,
+    ModuleSettings? settings,
+  }) {
+    return CreateModuleState(
+      title: title ?? this.title,
+      description: description ?? this.description,
+      flashcards: flashcards ?? this.flashcards,
+      termErrors: termErrors ?? this.termErrors,
+      definitionErrors: definitionErrors ?? this.definitionErrors,
+      titleError: titleError,
+      status: status ?? this.status,
+      errorMessage: errorMessage ?? this.errorMessage,
+      settings: settings ?? this.settings,
+    );
+  }
+
+  bool get isValid {
+    if (title.trim().isEmpty || titleError != null) return false;
+    if (flashcards.length < 2) return false;
+    for (int i = 0; i < 2; i++) {
+      if (i >= flashcards.length) return false;
+      if (flashcards[i].term.trim().isEmpty ||
+          flashcards[i].definition.trim().isEmpty) {
+        return false;
+      }
+    }
+    if (termErrors.isNotEmpty || definitionErrors.isNotEmpty) return false;
+    return true;
+  }
+}
+
+// StateNotifier for module creation
+class CreateModuleNotifier extends StateNotifier<CreateModuleState> {
   final ModuleRepository _repository;
-  bool _isClosed = false;
 
-  CreateModuleCubit(this._repository)
+  CreateModuleNotifier(this._repository)
       : super(CreateModuleState(
           flashcards: [
             Flashcard.empty(order: 0),
@@ -18,27 +84,15 @@ class CreateModuleCubit extends Cubit<CreateModuleState> {
           ],
         ));
 
-  @override
-  Future<void> close() {
-    _isClosed = true;
-    return super.close();
-  }
-
-  void _safeEmit(CreateModuleState newState) {
-    if (!_isClosed) {
-      emit(newState);
-    }
-  }
-
   void updateTitle(String title) {
-    _safeEmit(state.copyWith(
+    state = state.copyWith(
       title: title,
       titleError: title.trim().isEmpty ? 'Vui lòng nhập tiêu đề' : null,
-    ));
+    );
   }
 
   void updateDescription(String description) {
-    _safeEmit(state.copyWith(description: description));
+    state = state.copyWith(description: description);
   }
 
   void updateFlashcardTerm(int index, String term) {
@@ -52,10 +106,10 @@ class CreateModuleCubit extends Cubit<CreateModuleState> {
       newTermErrors.remove(index);
     }
 
-    _safeEmit(state.copyWith(
+    state = state.copyWith(
       flashcards: newFlashcards,
       termErrors: newTermErrors,
-    ));
+    );
   }
 
   void updateFlashcardDefinition(int index, String definition) {
@@ -70,16 +124,16 @@ class CreateModuleCubit extends Cubit<CreateModuleState> {
       newDefErrors.remove(index);
     }
 
-    _safeEmit(state.copyWith(
+    state = state.copyWith(
       flashcards: newFlashcards,
       definitionErrors: newDefErrors,
-    ));
+    );
   }
 
   void addFlashcard() {
     final newFlashcards = List<Flashcard>.from(state.flashcards);
     newFlashcards.add(Flashcard.empty(order: newFlashcards.length));
-    _safeEmit(state.copyWith(flashcards: newFlashcards));
+    state = state.copyWith(flashcards: newFlashcards);
   }
 
   void removeFlashcard(int index) {
@@ -89,20 +143,20 @@ class CreateModuleCubit extends Cubit<CreateModuleState> {
     if (index < newFlashcards.length) {
       newFlashcards.removeAt(index);
 
-      // Cập nhật lại order cho các flashcard sau khi xóa
+      // Update order values for remaining flashcards
       for (int i = index; i < newFlashcards.length; i++) {
         newFlashcards[i] = newFlashcards[i].copyWith(order: i);
       }
     }
 
+    // Clean up error maps
     final newTermErrors = Map<int, String?>.from(state.termErrors);
     final newDefErrors = Map<int, String?>.from(state.definitionErrors);
 
-    // Xóa lỗi của flashcard bị xóa
     newTermErrors.remove(index);
     newDefErrors.remove(index);
 
-    // Cập nhật lại key cho các lỗi của flashcard sau index
+    // Adjust error indices for remaining errors
     for (int i = index + 1; i < state.flashcards.length; i++) {
       if (newTermErrors.containsKey(i)) {
         final error = newTermErrors.remove(i);
@@ -119,11 +173,11 @@ class CreateModuleCubit extends Cubit<CreateModuleState> {
       }
     }
 
-    _safeEmit(state.copyWith(
+    state = state.copyWith(
       flashcards: newFlashcards,
       termErrors: newTermErrors,
       definitionErrors: newDefErrors,
-    ));
+    );
   }
 
   bool validateForm() {
@@ -132,14 +186,15 @@ class CreateModuleCubit extends Cubit<CreateModuleState> {
     Map<int, String?> newDefErrors = {};
     bool isValid = true;
 
+    // Validate title
     if (title.isEmpty) {
-      _safeEmit(state.copyWith(titleError: 'Vui lòng nhập tiêu đề'));
+      state = state.copyWith(titleError: 'Vui lòng nhập tiêu đề');
       isValid = false;
     } else {
-      _safeEmit(state.copyWith(titleError: null));
+      state = state.copyWith(titleError: null);
     }
 
-    // Kiểm tra 2 flashcard đầu tiên (bắt buộc)
+    // Validate required first two flashcards
     for (int i = 0; i < 2; i++) {
       if (i < state.flashcards.length) {
         if (state.flashcards[i].term.trim().isEmpty) {
@@ -153,12 +208,11 @@ class CreateModuleCubit extends Cubit<CreateModuleState> {
       }
     }
 
-    // Kiểm tra các flashcard không bắt buộc
+    // Validate optional additional flashcards - if term is filled, definition must be filled too and vice versa
     for (int i = 2; i < state.flashcards.length; i++) {
       final term = state.flashcards[i].term.trim();
       final definition = state.flashcards[i].definition.trim();
 
-      // Nếu có term nhưng không có definition hoặc ngược lại
       if (term.isNotEmpty && definition.isEmpty) {
         newDefErrors[i] = 'Vui lòng nhập định nghĩa';
         isValid = false;
@@ -168,10 +222,10 @@ class CreateModuleCubit extends Cubit<CreateModuleState> {
       }
     }
 
-    _safeEmit(state.copyWith(
+    state = state.copyWith(
       termErrors: newTermErrors,
       definitionErrors: newDefErrors,
-    ));
+    );
 
     return isValid;
   }
@@ -179,20 +233,18 @@ class CreateModuleCubit extends Cubit<CreateModuleState> {
   Future<bool> submitModule() async {
     if (!validateForm()) return false;
 
-    _safeEmit(state.copyWith(status: CreateModuleStatus.submitting));
+    state = state.copyWith(status: CreateModuleStatus.submitting);
 
     try {
-      // Chỉ lấy các flashcard hợp lệ (có cả term và definition)
       final validFlashcards = state.flashcards.where((card) {
         return card.term.trim().isNotEmpty && card.definition.trim().isNotEmpty;
       }).toList();
 
-      // Tạo StudyModule từ state hiện tại
       final module = StudyModule(
-        id: DateTime.now().millisecondsSinceEpoch.toString(), // ID tạm thời
+        id: DateTime.now().millisecondsSinceEpoch.toString(), // Temporary ID
         title: state.title,
         description: state.description,
-        creatorName: 'giapnguyen1994', // Lấy từ user profile trong thực tế
+        creatorName: 'giapnguyen1994', // Should be taken from user profile
         termCount: validFlashcards.length,
         flashcards: validFlashcards,
         createdAt: DateTime.now(),
@@ -203,41 +255,29 @@ class CreateModuleCubit extends Cubit<CreateModuleState> {
         autoSuggest: state.settings.autoSuggest,
       );
 
-      final createdModule = await _repository.createStudyModule(module);
+      await _repository.createStudyModule(module);
 
-      _safeEmit(state.copyWith(
-        status: CreateModuleStatus.success,
-      ));
-
+      state = state.copyWith(status: CreateModuleStatus.success);
       return true;
-    } on NetworkTimeoutException catch (e) {
-      _safeEmit(state.copyWith(
-        status: CreateModuleStatus.failure,
-        errorMessage: 'Không thể kết nối đến máy chủ: ${e.message}',
-      ));
-      return false;
-    } on PermissionException catch (e) {
-      _safeEmit(state.copyWith(
-        status: CreateModuleStatus.failure,
-        errorMessage: e.message,
-      ));
-      return false;
-    } on ModuleException catch (e) {
-      _safeEmit(state.copyWith(
-        status: CreateModuleStatus.failure,
-        errorMessage: e.message,
-      ));
-      return false;
     } catch (e) {
-      _safeEmit(state.copyWith(
+      state = state.copyWith(
         status: CreateModuleStatus.failure,
         errorMessage: 'Đã xảy ra lỗi: $e',
-      ));
+      );
       return false;
     }
   }
 
   void updateSettings(ModuleSettings settings) {
-    _safeEmit(state.copyWith(settings: settings));
+    state = state.copyWith(settings: settings);
   }
 }
+
+// Provider for the CreateModuleNotifier
+final createModuleProvider =
+    StateNotifierProvider<CreateModuleNotifier, CreateModuleState>(
+  (ref) {
+    final repository = ref.watch(moduleRepositoryProvider);
+    return CreateModuleNotifier(repository);
+  },
+);

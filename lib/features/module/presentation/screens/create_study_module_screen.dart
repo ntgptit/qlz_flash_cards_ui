@@ -1,12 +1,11 @@
 // lib/features/module/presentation/screens/create_study_module_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
-import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
-import 'package:qlz_flash_cards_ui/features/module/logic/cubit/create_module_cubit.dart';
-import 'package:qlz_flash_cards_ui/features/module/logic/states/create_module_state.dart';
+import 'package:qlz_flash_cards_ui/features/module/presentation/providers/create_module_provider.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/buttons/qlz_button.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/cards/qlz_card.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_loading_state.dart';
@@ -16,14 +15,16 @@ import 'package:qlz_flash_cards_ui/shared/widgets/labels/qlz_label.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/layout/qlz_screen.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
 
-class CreateStudyModuleScreen extends StatefulWidget {
+class CreateStudyModuleScreen extends ConsumerStatefulWidget {
   const CreateStudyModuleScreen({super.key});
+
   @override
-  State<CreateStudyModuleScreen> createState() =>
+  ConsumerState<CreateStudyModuleScreen> createState() =>
       _CreateStudyModuleScreenState();
 }
 
-class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
+class _CreateStudyModuleScreenState
+    extends ConsumerState<CreateStudyModuleScreen> {
   final _scrollController = ScrollController();
   final Map<int, TextEditingController> _termControllers = {};
   final Map<int, TextEditingController> _definitionControllers = {};
@@ -33,15 +34,18 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
   @override
   void initState() {
     super.initState();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeControllers();
     });
   }
 
   void _initializeControllers() {
-    final state = context.read<CreateModuleCubit>().state;
+    final state = ref.read(createModuleProvider);
+
     _titleController.text = state.title;
     _descriptionController.text = state.description;
+
     for (int i = 0; i < state.flashcards.length; i++) {
       _getTermController(i, state.flashcards[i].term);
       _getDefinitionController(i, state.flashcards[i].definition);
@@ -62,8 +66,8 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
     if (!_termControllers.containsKey(index)) {
       _termControllers[index] = TextEditingController(text: initialText);
       _termControllers[index]!.addListener(() {
-        context
-            .read<CreateModuleCubit>()
+        ref
+            .read(createModuleProvider.notifier)
             .updateFlashcardTerm(index, _termControllers[index]!.text);
       });
     }
@@ -75,7 +79,7 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
     if (!_definitionControllers.containsKey(index)) {
       _definitionControllers[index] = TextEditingController(text: initialText);
       _definitionControllers[index]!.addListener(() {
-        context.read<CreateModuleCubit>().updateFlashcardDefinition(
+        ref.read(createModuleProvider.notifier).updateFlashcardDefinition(
             index, _definitionControllers[index]!.text);
       });
     }
@@ -84,7 +88,8 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
 
   void _addNewCard() {
     HapticFeedback.selectionClick();
-    context.read<CreateModuleCubit>().addFlashcard();
+    ref.read(createModuleProvider.notifier).addFlashcard();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -96,13 +101,17 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
     });
   }
 
-  void _updateControllersFromState(List<Flashcard> flashcards) {
-    for (int i = 0; i < flashcards.length; i++) {
-      final flashcard = flashcards[i];
+  void _updateControllersFromState(ref) {
+    final state = ref.read(createModuleProvider);
+
+    for (int i = 0; i < state.flashcards.length; i++) {
+      final flashcard = state.flashcards[i];
+
       if (_termControllers.containsKey(i) &&
           _termControllers[i]!.text != flashcard.term) {
         _termControllers[i]!.text = flashcard.term;
       }
+
       if (_definitionControllers.containsKey(i) &&
           _definitionControllers[i]!.text != flashcard.definition) {
         _definitionControllers[i]!.text = flashcard.definition;
@@ -112,8 +121,11 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
 
   Future<void> _handleSave() async {
     HapticFeedback.mediumImpact();
-    final result = await context.read<CreateModuleCubit>().submitModule();
+
+    final result = await ref.read(createModuleProvider.notifier).submitModule();
+
     if (!mounted) return;
+
     if (result) {
       QlzSnackbar.success(
         context: context,
@@ -130,78 +142,79 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<CreateModuleCubit, CreateModuleState>(
-      listener: (context, state) {
-        _updateControllersFromState(state.flashcards);
-      },
-      builder: (context, state) {
-        final isSubmitting = state.status == CreateModuleStatus.submitting;
-        return QlzScreen(
-          appBar: QlzAppBar(
-            title: 'Tạo học phần',
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.settings),
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                  Navigator.pushNamed(
-                    context,
-                    AppRoutes.moduleSettings,
-                  );
-                },
-              ),
-              isSubmitting
-                  ? const Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      ),
-                    )
-                  : IconButton(
-                      icon: const Icon(Icons.check),
-                      onPressed: _handleSave,
-                    ),
-            ],
+    // Listen for state changes to update controllers
+    ref.listen(createModuleProvider, (_, state) {
+      _updateControllersFromState(ref);
+    });
+
+    // Watch state for UI updates
+    final state = ref.watch(createModuleProvider);
+    final isSubmitting = state.status == CreateModuleStatus.submitting;
+
+    return QlzScreen(
+      appBar: QlzAppBar(
+        title: 'Tạo học phần',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              Navigator.pushNamed(
+                context,
+                AppRoutes.moduleSettings,
+              );
+            },
           ),
-          child: isSubmitting
-              ? const Center(
-                  child: QlzLoadingState(
-                    message: 'Đang tạo học phần...',
-                    type: QlzLoadingType.circular,
+          isSubmitting
+              ? const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
                   ),
                 )
-              : Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: SingleChildScrollView(
-                    controller: _scrollController,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 16),
-                        const QlzLabel.muted('Chủ đề, chương, đơn vị'),
-                        const SizedBox(height: 16),
-                        _buildModuleInfoCard(state),
-                        _buildVocabularyCardsList(state),
-                        const SizedBox(height: 20),
-                        Center(
-                          child: QlzButton.secondary(
-                            label: 'Thêm thẻ',
-                            icon: Icons.add,
-                            onPressed: _addNewCard,
-                          ),
-                        ),
-                        const SizedBox(height: 40),
-                      ],
-                    ),
-                  ),
+              : IconButton(
+                  icon: const Icon(Icons.check),
+                  onPressed: _handleSave,
                 ),
-        );
-      },
+        ],
+      ),
+      child: isSubmitting
+          ? const Center(
+              child: QlzLoadingState(
+                message: 'Đang tạo học phần...',
+                type: QlzLoadingType.circular,
+              ),
+            )
+          : Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    const QlzLabel.muted('Chủ đề, chương, đơn vị'),
+                    const SizedBox(height: 16),
+                    _buildModuleInfoCard(state),
+                    _buildVocabularyCardsList(state),
+                    const SizedBox(height: 20),
+                    Center(
+                      child: QlzButton.secondary(
+                        label: 'Thêm thẻ',
+                        icon: Icons.add,
+                        onPressed: _addNewCard,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 
@@ -242,7 +255,7 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
               error: state.titleError,
               controller: _titleController,
               onChanged: (value) =>
-                  context.read<CreateModuleCubit>().updateTitle(value),
+                  ref.read(createModuleProvider.notifier).updateTitle(value),
             ),
             const SizedBox(height: 20),
             const QlzLabel('MÔ TẢ'),
@@ -251,8 +264,9 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
               hintText: 'Thêm mô tả...',
               isMultiline: true,
               controller: _descriptionController,
-              onChanged: (value) =>
-                  context.read<CreateModuleCubit>().updateDescription(value),
+              onChanged: (value) => ref
+                  .read(createModuleProvider.notifier)
+                  .updateDescription(value),
             ),
           ],
         ),
@@ -281,6 +295,7 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
     final termController = _getTermController(index, flashcard.term);
     final definitionController =
         _getDefinitionController(index, flashcard.definition);
+
     return QlzCard(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -301,7 +316,9 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
                   ),
                   onPressed: () {
                     HapticFeedback.mediumImpact();
-                    context.read<CreateModuleCubit>().removeFlashcard(index);
+                    ref
+                        .read(createModuleProvider.notifier)
+                        .removeFlashcard(index);
                     _termControllers.remove(index)?.dispose();
                     _definitionControllers.remove(index)?.dispose();
                   },

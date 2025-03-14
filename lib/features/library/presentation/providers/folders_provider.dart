@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/core/providers/app_providers.dart';
 import 'package:qlz_flash_cards_ui/features/library/data/models/folder_model.dart';
 import 'package:qlz_flash_cards_ui/features/library/data/repositories/library_repository.dart';
-import 'package:qlz_flash_cards_ui/features/library/logic/states/folders_state.dart';
+import 'package:qlz_flash_cards_ui/features/library/domain/states/folders_state.dart';
 
 /// Provider for folders
 final foldersProvider =

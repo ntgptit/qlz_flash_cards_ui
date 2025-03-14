@@ -1,3 +1,5 @@
+// lib/main.dart
+
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -32,7 +34,7 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
 
   runApp(
-    // Bọc toàn bộ ứng dụng trong ProviderScope của Riverpod
+    // Đặt ProviderScope ở mức cao nhất của ứng dụng
     ProviderScope(
       // Override SharedPreferences provider với instance thực
       overrides: [
@@ -64,7 +66,7 @@ final class QlzFlashCardsApp extends StatelessWidget {
       },
     );
 
-    // Trả về app trực tiếp vì các providers đã được cung cấp bởi ProviderScope
+    // Trả về app trực tiếp vì các providers đã được cung cấp bởi ProviderScope ở mức cao nhất
     return app;
   }
 }

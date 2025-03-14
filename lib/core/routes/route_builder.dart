@@ -1,11 +1,10 @@
+// lib/core/routes/route_builder.dart
+
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/flashcard_module.dart';
 import 'package:qlz_flash_cards_ui/features/library/library_module.dart';
 import 'package:qlz_flash_cards_ui/features/module/module_module.dart';
-import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_settings.dart';
-import 'package:qlz_flash_cards_ui/features/quiz/quiz_module.dart';
 
 import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
@@ -36,55 +35,40 @@ class RouteBuilder {
     AppRoutes.library: (_) => LibraryModule.provideRiverpodScreen(),
 
     AppRoutes.folderDetail: (params) {
-      return Consumer(
-        builder: (context, ref, _) {
-          final folderName = params.getString('folderName', 'Unknown');
-          final folderId = params.getString('folderId');
-          // Đảm bảo dòng này gọi đúng function
-          return LibraryModule.provideRiverpodFolderDetailScreen(
-            ref: ref,
-            folderName: folderName,
-            folderId: folderId,
-          );
-        },
+      final folderName = params.getString('folderName', 'Unknown');
+      final folderId = params.getString('folderId');
+      return LibraryModule.provideRiverpodFolderDetailScreen(
+        folderName: folderName,
+        folderId: folderId,
       );
     },
 
-    AppRoutes.classDetail: (params) => Consumer(
-          builder: (context, ref, _) {
-            final classId = params.getString('classId');
-            final className = params.getString('className', 'Unknown');
-            return LibraryModule.provideRiverpodClassDetailScreen(
-              ref: ref,
-              classId: classId,
-              className: className,
-            );
-          },
-        ),
+    AppRoutes.classDetail: (params) {
+      final classId = params.getString('classId');
+      final className = params.getString('className', 'Unknown');
+      return LibraryModule.provideRiverpodClassDetailScreen(
+        classId: classId,
+        className: className,
+      );
+    },
 
-    AppRoutes.listStudyModuleOfFolder: (params) => Consumer(
-          builder: (context, ref, _) {
-            final folderName = params.getString('folderName', 'Unknown');
-            final folderId = params.getString('folderId');
-            return ModuleModule.provideRiverpodListScreen(
-              ref: ref,
-              folderName: folderName,
-              folderId: folderId,
-            );
-          },
-        ),
+    AppRoutes.listStudyModuleOfFolder: (params) {
+      final folderName = params.getString('folderName', 'Unknown');
+      final folderId = params.getString('folderId');
+      return ModuleModule.provideListScreen(
+        folderName: folderName,
+        folderId: folderId,
+      );
+    },
 
-    AppRoutes.moduleDetail: (params) => Consumer(
-          builder: (context, ref, _) {
-            final moduleId = params.getString('moduleId', '');
-            final moduleName = params.getString('moduleName', 'Module');
-            return ModuleModule.provideRiverpodDetailScreen(
-              ref: ref,
-              moduleId: moduleId,
-              moduleName: moduleName,
-            );
-          },
-        ),
+    AppRoutes.moduleDetail: (params) {
+      final moduleId = params.getString('moduleId', '');
+      final moduleName = params.getString('moduleName', 'Module');
+      return ModuleModule.provideDetailScreen(
+        moduleId: moduleId,
+        moduleName: moduleName,
+      );
+    },
 
     AppRoutes.studyFlashcards: (params) {
       final flashcards = params.getFlashcards('flashcards');
@@ -98,88 +82,67 @@ class RouteBuilder {
       );
     },
 
-    AppRoutes.quizSettings: (params) => Consumer(
-          builder: (context, ref, _) {
-            final moduleId = params.getString('moduleId', '');
-            final moduleName = params.getString('moduleName', 'Bài kiểm tra');
-            final flashcards = params.getFlashcards('flashcards');
+    // AppRoutes.quizSettings: (params) {
+    //   final moduleId = params.getString('moduleId', '');
+    //   final moduleName = params.getString('moduleName', 'Bài kiểm tra');
+    //   final flashcards = params.getFlashcards('flashcards');
 
-            return QuizModule.provideRiverpodSettingsScreen(
-              ref: ref,
-              moduleId: moduleId,
-              moduleName: moduleName,
-              flashcards: flashcards,
-            );
-          },
-        ),
+    //   return QuizModule.provideRiverpodSettingsScreen(
+    //     moduleId: moduleId,
+    //     moduleName: moduleName,
+    //     flashcards: flashcards,
+    //   );
+    // },
 
-    AppRoutes.quiz: (params) => Consumer(
-          builder: (context, ref, _) {
-            final quizData = {
-              'quizType': params.getEnum(
-                  'quizType', QuizType.values, QuizType.values.first),
-              'difficulty': params.getEnum('difficulty', QuizDifficulty.values,
-                  QuizDifficulty.values.first),
-              'flashcards': params.getFlashcards('flashcards'),
-              'moduleId': params.getString('moduleId', ''),
-              'moduleName': params.getString('moduleName', ''),
-              'questionCount': params.getInt('questionCount', 10),
-              'shuffleQuestions': params.getBool('shuffleQuestions', true),
-              'showCorrectAnswers': params.getBool('showCorrectAnswers', true),
-              'enableTimer': params.getBool('enableTimer', false),
-              'timePerQuestion': params.getInt('timePerQuestion', 30),
-            };
+    // AppRoutes.quiz: (params) {
+    //   final quizData = {
+    //     'quizType':
+    //         params.getEnum('quizType', QuizType.values, QuizType.values.first),
+    //     'difficulty': params.getEnum(
+    //         'difficulty', QuizDifficulty.values, QuizDifficulty.values.first),
+    //     'flashcards': params.getFlashcards('flashcards'),
+    //     'moduleId': params.getString('moduleId', ''),
+    //     'moduleName': params.getString('moduleName', ''),
+    //     'questionCount': params.getInt('questionCount', 10),
+    //     'shuffleQuestions': params.getBool('shuffleQuestions', true),
+    //     'showCorrectAnswers': params.getBool('showCorrectAnswers', true),
+    //     'enableTimer': params.getBool('enableTimer', false),
+    //     'timePerQuestion': params.getInt('timePerQuestion', 30),
+    //   };
 
-            return QuizModule.provideRiverpodQuizScreen(
-              ref: ref,
-              quizData: quizData,
-            );
-          },
-        ),
+    //   return QuizModule.provideRiverpodQuizScreen(
+    //     quizData: quizData,
+    //   );
+    // },
 
     AppRoutes.profile: (_) => const ProfileScreen(),
 
-    AppRoutes.createStudyModule: (_) => Consumer(
-          builder: (context, ref, _) {
-            return ModuleModule.provideRiverpodCreateScreen(ref: ref);
-          },
-        ),
+    AppRoutes.createStudyModule: (_) => ModuleModule.provideCreateScreen(),
 
-    AppRoutes.moduleSettings: (params) => Consumer(
-          builder: (context, ref, _) {
-            final moduleId = params.getString('moduleId', 'new');
-            return ModuleModule.provideRiverpodSettingsScreen(
-              ref: ref,
-              moduleId: moduleId,
-            );
-          },
-        ),
+    AppRoutes.moduleSettings: (params) {
+      final moduleId = params.getString('moduleId', 'new');
+      return ModuleModule.provideSettingsScreen(
+        moduleId: moduleId,
+      );
+    },
 
-    AppRoutes.createFolder: (_) => Consumer(
-          builder: (context, ref, _) {
-            return LibraryModule.provideRiverpodCreateFolderScreen(ref: ref);
-          },
-        ),
+    AppRoutes.createFolder: (_) =>
+        LibraryModule.provideRiverpodCreateFolderScreen(),
 
-    AppRoutes.createClass: (_) => Consumer(
-          builder: (context, ref, _) {
-            return LibraryModule.provideRiverpodCreateClassScreen(ref: ref);
-          },
-        ),
+    AppRoutes.createClass: (_) =>
+        LibraryModule.provideRiverpodCreateClassScreen(),
 
-    AppRoutes.learn: (params) => Consumer(
-          builder: (context, ref, _) {
-            final flashcards = params.getFlashcards('flashcards');
-            final moduleName = params.getString('moduleName', 'Học phần');
-            final moduleId = params.getString('moduleId');
+    AppRoutes.learn: (params) {
+      final flashcards = params.getFlashcards('flashcards');
+      final moduleName = params.getString('moduleName', 'Học phần');
+      final moduleId = params.getString('moduleId');
 
-            return StudySettingsScreen(
-              flashcards: flashcards,
-              moduleName: moduleName,
-              moduleId: moduleId,
-            );
-          },
-        ),
+      return StudySettingsScreen(
+        flashcards: flashcards,
+        moduleName: moduleName,
+        moduleId: moduleId,
+      );
+    },
 
     // Placeholder routes
     AppRoutes.test: (params) => _buildPlaceholderScreen('Test Route', params),
@@ -193,6 +156,8 @@ class RouteBuilder {
     final builder = _routeBuilders[settings.name] ?? _errorScreenBuilder;
 
     try {
+      // Không bọc toàn bộ builder trong ProviderScope nữa
+      // vì các module riêng lẻ đã có ProviderScope của riêng chúng
       return MaterialPageRoute(
         settings: settings,
         builder: (context) => builder(params),
