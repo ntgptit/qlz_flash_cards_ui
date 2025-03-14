@@ -20,7 +20,6 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   static const double horizontalPadding = 16.0;
-  static const double verticalSpacing = 16.0;
 
   @override
   void initState() {
