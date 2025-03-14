@@ -1,4 +1,4 @@
-// C:/Users/ntgpt/OneDrive/workspace/qlz_flash_cards_ui/lib/features/module/screens/create_study_module_screen.dart
+// lib/features/module/presentation/screens/create_study_module_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,7 +18,6 @@ import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
 
 class CreateStudyModuleScreen extends StatefulWidget {
   const CreateStudyModuleScreen({super.key});
-
   @override
   State<CreateStudyModuleScreen> createState() =>
       _CreateStudyModuleScreenState();
@@ -26,8 +25,6 @@ class CreateStudyModuleScreen extends StatefulWidget {
 
 class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
   final _scrollController = ScrollController();
-
-  // Quản lý TextEditingController với Maps
   final Map<int, TextEditingController> _termControllers = {};
   final Map<int, TextEditingController> _definitionControllers = {};
   final _titleController = TextEditingController();
@@ -36,7 +33,6 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
   @override
   void initState() {
     super.initState();
-    // Lắng nghe thay đổi trong state để cập nhật controllers
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeControllers();
     });
@@ -46,7 +42,6 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
     final state = context.read<CreateModuleCubit>().state;
     _titleController.text = state.title;
     _descriptionController.text = state.description;
-
     for (int i = 0; i < state.flashcards.length; i++) {
       _getTermController(i, state.flashcards[i].term);
       _getDefinitionController(i, state.flashcards[i].definition);
@@ -58,15 +53,11 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
     _scrollController.dispose();
     _titleController.dispose();
     _descriptionController.dispose();
-
-    // Giải phóng tất cả controllers
     _termControllers.forEach((_, controller) => controller.dispose());
     _definitionControllers.forEach((_, controller) => controller.dispose());
-
     super.dispose();
   }
 
-  // Lấy hoặc tạo TextEditingController cho term
   TextEditingController _getTermController(int index, String initialText) {
     if (!_termControllers.containsKey(index)) {
       _termControllers[index] = TextEditingController(text: initialText);
@@ -79,7 +70,6 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
     return _termControllers[index]!;
   }
 
-  // Lấy hoặc tạo TextEditingController cho definition
   TextEditingController _getDefinitionController(
       int index, String initialText) {
     if (!_definitionControllers.containsKey(index)) {
@@ -95,8 +85,6 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
   void _addNewCard() {
     HapticFeedback.selectionClick();
     context.read<CreateModuleCubit>().addFlashcard();
-
-    // Scroll xuống sau khi thêm thẻ mới
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -108,16 +96,13 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
     });
   }
 
-  // Cập nhật controllers khi flashcards thay đổi
   void _updateControllersFromState(List<Flashcard> flashcards) {
     for (int i = 0; i < flashcards.length; i++) {
       final flashcard = flashcards[i];
-
       if (_termControllers.containsKey(i) &&
           _termControllers[i]!.text != flashcard.term) {
         _termControllers[i]!.text = flashcard.term;
       }
-
       if (_definitionControllers.containsKey(i) &&
           _definitionControllers[i]!.text != flashcard.definition) {
         _definitionControllers[i]!.text = flashcard.definition;
@@ -127,10 +112,8 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
 
   Future<void> _handleSave() async {
     HapticFeedback.mediumImpact();
-
     final result = await context.read<CreateModuleCubit>().submitModule();
     if (!mounted) return;
-
     if (result) {
       QlzSnackbar.success(
         context: context,
@@ -149,12 +132,10 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
   Widget build(BuildContext context) {
     return BlocConsumer<CreateModuleCubit, CreateModuleState>(
       listener: (context, state) {
-        // Cập nhật controllers khi state thay đổi
         _updateControllersFromState(state.flashcards);
       },
       builder: (context, state) {
         final isSubmitting = state.status == CreateModuleStatus.submitting;
-
         return QlzScreen(
           appBar: QlzAppBar(
             title: 'Tạo học phần',
@@ -194,26 +175,29 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
                     type: QlzLoadingType.circular,
                   ),
                 )
-              : SingleChildScrollView(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const QlzLabel.muted('Chủ đề, chương, đơn vị'),
-                      const SizedBox(height: 16),
-                      _buildModuleInfoCard(state),
-                      _buildVocabularyCardsList(state),
-                      const SizedBox(height: 20),
-                      Center(
-                        child: QlzButton.secondary(
-                          label: 'Thêm thẻ',
-                          icon: Icons.add,
-                          onPressed: _addNewCard,
+              : Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 16),
+                        const QlzLabel.muted('Chủ đề, chương, đơn vị'),
+                        const SizedBox(height: 16),
+                        _buildModuleInfoCard(state),
+                        _buildVocabularyCardsList(state),
+                        const SizedBox(height: 20),
+                        Center(
+                          child: QlzButton.secondary(
+                            label: 'Thêm thẻ',
+                            icon: Icons.add,
+                            onPressed: _addNewCard,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 40),
-                    ],
+                        const SizedBox(height: 40),
+                      ],
+                    ),
                   ),
                 ),
         );
@@ -222,54 +206,56 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
   }
 
   Widget _buildModuleInfoCard(CreateModuleState state) {
-    return QlzCard(
-      padding: const EdgeInsets.all(20),
-      margin: const EdgeInsets.only(bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const QlzLabel('TIÊU ĐỀ'),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              QlzButton.secondary(
-                label: 'Quét tài liệu',
-                icon: Icons.document_scanner_outlined,
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                },
-                size: QlzButtonSize.small,
-              ),
-              const SizedBox(width: 8),
-              QlzButton.ghost(
-                label: 'Nhập',
-                icon: Icons.upload_file_outlined,
-                onPressed: () {
-                  HapticFeedback.lightImpact();
-                },
-                size: QlzButtonSize.small,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          QlzTextField(
-            hintText: 'Học phần của bạn có chủ đề gì?',
-            error: state.titleError,
-            controller: _titleController,
-            onChanged: (value) =>
-                context.read<CreateModuleCubit>().updateTitle(value),
-          ),
-          const SizedBox(height: 20),
-          const QlzLabel('MÔ TẢ'),
-          const SizedBox(height: 12),
-          QlzTextField(
-            hintText: 'Thêm mô tả...',
-            isMultiline: true,
-            controller: _descriptionController,
-            onChanged: (value) =>
-                context.read<CreateModuleCubit>().updateDescription(value),
-          ),
-        ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: QlzCard(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const QlzLabel('TIÊU ĐỀ'),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                QlzButton.secondary(
+                  label: 'Quét tài liệu',
+                  icon: Icons.document_scanner_outlined,
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                  },
+                  size: QlzButtonSize.small,
+                ),
+                const SizedBox(width: 8),
+                QlzButton.ghost(
+                  label: 'Nhập',
+                  icon: Icons.upload_file_outlined,
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                  },
+                  size: QlzButtonSize.small,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            QlzTextField(
+              hintText: 'Học phần của bạn có chủ đề gì?',
+              error: state.titleError,
+              controller: _titleController,
+              onChanged: (value) =>
+                  context.read<CreateModuleCubit>().updateTitle(value),
+            ),
+            const SizedBox(height: 20),
+            const QlzLabel('MÔ TẢ'),
+            const SizedBox(height: 12),
+            QlzTextField(
+              hintText: 'Thêm mô tả...',
+              isMultiline: true,
+              controller: _descriptionController,
+              onChanged: (value) =>
+                  context.read<CreateModuleCubit>().updateDescription(value),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -279,8 +265,12 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: state.flashcards.length,
-      itemBuilder: (context, index) =>
-          _buildVocabularyCard(context, index, state),
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: _buildVocabularyCard(context, index, state),
+        );
+      },
     );
   }
 
@@ -288,15 +278,11 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
       BuildContext context, int index, CreateModuleState state) {
     final isRequired = index < 2;
     final flashcard = state.flashcards[index];
-
-    // Sử dụng controller đã tạo
     final termController = _getTermController(index, flashcard.term);
     final definitionController =
         _getDefinitionController(index, flashcard.definition);
-
     return QlzCard(
-      padding: const EdgeInsets.all(20),
-      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -316,8 +302,6 @@ class _CreateStudyModuleScreenState extends State<CreateStudyModuleScreen> {
                   onPressed: () {
                     HapticFeedback.mediumImpact();
                     context.read<CreateModuleCubit>().removeFlashcard(index);
-
-                    // Xóa controllers khi xóa flashcard
                     _termControllers.remove(index)?.dispose();
                     _definitionControllers.remove(index)?.dispose();
                   },

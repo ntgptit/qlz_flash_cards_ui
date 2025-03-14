@@ -1,4 +1,4 @@
-// C:/Users/ntgpt/OneDrive/workspace/qlz_flash_cards_ui/lib/features/module/screens/list_study_module_of_folder_screen.dart
+// lib/features/module/presentation/screens/list_study_module_of_folder_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -16,13 +16,11 @@ import 'package:qlz_flash_cards_ui/shared/widgets/utils/qlz_chip.dart';
 class ListStudyModuleOfFolderScreen extends StatefulWidget {
   final String folderName;
   final String folderId;
-
   const ListStudyModuleOfFolderScreen({
     super.key,
     required this.folderName,
     required this.folderId,
   });
-
   @override
   State<ListStudyModuleOfFolderScreen> createState() =>
       _ListStudyModuleOfFolderScreenState();
@@ -33,8 +31,6 @@ class _ListStudyModuleOfFolderScreenState
   @override
   void initState() {
     super.initState();
-    // Không khởi tạo cubit ở đây nữa, sử dụng BlocProvider
-    // Chỉ gọi phương thức để tải dữ liệu
     context.read<StudyModuleCubit>().loadStudyModulesByFolder(widget.folderId);
   }
 
@@ -96,13 +92,13 @@ class _ListStudyModuleOfFolderScreenState
             );
           }
 
-          return SafeArea(
-            child: RefreshIndicator(
-              onRefresh: () => context
-                  .read<StudyModuleCubit>()
-                  .refreshFolderStudyModules(widget.folderId),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: SafeArea(
+              child: RefreshIndicator(
+                onRefresh: () => context
+                    .read<StudyModuleCubit>()
+                    .refreshFolderStudyModules(widget.folderId),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -130,12 +126,14 @@ class _ListStudyModuleOfFolderScreenState
                     const SizedBox(height: 12),
                     Expanded(
                       child: ListView.builder(
-                        physics:
-                            const AlwaysScrollableScrollPhysics(), // Cho phép cuộn khi ít item
+                        physics: const AlwaysScrollableScrollPhysics(),
                         itemCount: state.modules.length,
                         itemBuilder: (context, index) {
                           final module = state.modules[index];
-                          return _buildModuleItem(context, module);
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _buildModuleItem(context, module),
+                          );
                         },
                       ),
                     ),
@@ -151,7 +149,6 @@ class _ListStudyModuleOfFolderScreenState
 
   Widget _buildModuleItem(BuildContext context, StudyModule module) {
     return QlzCard(
-      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       onTap: () {
         HapticFeedback.selectionClick();

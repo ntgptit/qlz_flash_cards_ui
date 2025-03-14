@@ -1,4 +1,4 @@
-// C:/Users/ntgpt/OneDrive/workspace/qlz_flash_cards_ui/lib/features/module/screens/module_detail_screen.dart
+// lib/features/module/presentation/screens/module_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,30 +18,23 @@ import 'package:qlz_flash_cards_ui/shared/widgets/utils/qlz_chip.dart';
 class ModuleDetailScreen extends StatefulWidget {
   final String id;
   final String name;
-
   const ModuleDetailScreen({
     super.key,
     required this.id,
     required this.name,
   });
-
   @override
   State<ModuleDetailScreen> createState() => _ModuleDetailScreenState();
 }
 
 class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
   late bool _loadingTimedOut = false;
-
   @override
   void initState() {
     super.initState();
-
-    // Lấy cubit trực tiếp và gọi loadModuleDetails
     WidgetsBinding.instance.addPostFrameCallback((_) {
       print("DEBUG: Widget loaded, preparing to load details");
       context.read<ModuleDetailCubit>().loadModuleDetails(widget.id);
-
-      // Thêm timeout để tránh trạng thái loading vô hạn
       Future.delayed(const Duration(seconds: 15), () {
         if (mounted && !_loadingTimedOut) {
           print("DEBUG: Loading timed out");
@@ -55,14 +48,11 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
 
   void _navigateToBlastMode(StudyModule module) {
     if (module.flashcards.isEmpty) return;
-
-    // Thêm phản hồi haptic cho trải nghiệm người dùng tốt hơn
     HapticFeedback.selectionClick();
   }
 
   void _navigateToFlashcardsMode(StudyModule module) {
     if (module.flashcards.isEmpty) return;
-
     HapticFeedback.selectionClick();
     AppRoutes.navigateToStudyFlashcards(
       context,
@@ -72,7 +62,6 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
 
   void _navigateToLearningMode(StudyModule module) {
     if (module.flashcards.isEmpty) return;
-
     HapticFeedback.selectionClick();
     AppRoutes.navigateToLearn(
       context,
@@ -84,7 +73,6 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
 
   void _navigateToQuizMode(StudyModule module) {
     if (module.flashcards.isEmpty) return;
-
     HapticFeedback.selectionClick();
     AppRoutes.navigateToQuizSettings(
       context,
@@ -96,7 +84,6 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
 
   void _navigateToMatchMode(StudyModule module) {
     if (module.flashcards.isEmpty) return;
-
     HapticFeedback.selectionClick();
     Navigator.pushNamed(
       context,
@@ -112,7 +99,6 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
   @override
   Widget build(BuildContext context) {
     print("DEBUG: Building UI, looking for BlocBuilder state");
-
     return BlocConsumer<ModuleDetailCubit, ModuleDetailState>(
       listener: (context, state) {
         print("DEBUG-Listener: State changed to ${state.status}");
@@ -120,7 +106,6 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
       builder: (context, state) {
         print(
             "DEBUG-Builder: Current state: ${state.status}, module: ${state.module != null}");
-
         if (_loadingTimedOut && state.status == ModuleDetailStatus.loading) {
           return Scaffold(
             backgroundColor: const Color(0xFF0A092D),
@@ -166,7 +151,6 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
           );
         }
 
-        // Phần còn lại của mã không thay đổi...
         if (state.status == ModuleDetailStatus.loading) {
           return const Scaffold(
             backgroundColor: Color(0xFF0A092D),
@@ -215,7 +199,6 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
         final module = state.module!;
         final hasFlashcards = module.flashcards.isNotEmpty;
 
-        // Phần còn lại giữ nguyên...
         return Scaffold(
           backgroundColor: const Color(0xFF0A092D),
           appBar: QlzAppBar(
@@ -235,39 +218,38 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
               ),
             ],
           ),
-          // Phần còn lại của UI
-          body: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              SliverToBoxAdapter(
-                child: Column(
-                  children: [
-                    if (hasFlashcards)
-                      QlzFlashcardCarousel(
-                        flashcards: module.flashcards,
-                        height: 240,
-                        initialPage: 0,
-                        onFullscreen: (index) {
-                          _navigateToFlashcardsMode(module);
-                        },
-                      )
-                    else
-                      const QlzCard(
-                        margin: EdgeInsets.all(20),
-                        height: 240,
-                        child: Center(
-                          child: Text(
-                            'No flashcards available',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
+          body: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Column(
+                    children: [
+                      if (hasFlashcards)
+                        QlzFlashcardCarousel(
+                          flashcards: module.flashcards,
+                          height: 240,
+                          initialPage: 0,
+                          onFullscreen: (index) {
+                            _navigateToFlashcardsMode(module);
+                          },
+                        )
+                      else
+                        const QlzCard(
+                          height: 240,
+                          child: Center(
+                            child: Text(
+                              'Chưa có thẻ ghi nhớ nào',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Text(
+                      const SizedBox(height: 16),
+                      Text(
                         module.title,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               color: Colors.white,
@@ -275,10 +257,8 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                             ),
                         textAlign: TextAlign.center,
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Row(
+                      const SizedBox(height: 16),
+                      Row(
                         children: [
                           QlzAvatar(
                             size: 32,
@@ -312,46 +292,50 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                           ),
                         ],
                       ),
-                    ),
-                    const Divider(color: Colors.white24, height: 1),
-                  ],
+                      const SizedBox(height: 16),
+                      const Divider(color: Colors.white24, height: 1),
+                    ],
+                  ),
                 ),
-              ),
-              SliverList(
-                delegate: SliverChildListDelegate([
-                  _buildStudyOption(
-                    icon: Icons.style_outlined,
-                    color: Colors.blue,
-                    label: 'Thẻ ghi nhớ',
-                    onTap: () => _navigateToFlashcardsMode(module),
-                  ),
-                  _buildStudyOption(
-                    icon: Icons.refresh,
-                    color: Colors.purple,
-                    label: 'Học',
-                    onTap: () => _navigateToLearningMode(module),
-                  ),
-                  _buildStudyOption(
-                    icon: Icons.quiz_outlined,
-                    color: Colors.green,
-                    label: 'Kiểm tra',
-                    onTap: () => _navigateToQuizMode(module),
-                  ),
-                  _buildStudyOption(
-                    icon: Icons.compare_arrows,
-                    color: Colors.orange,
-                    label: 'Ghép thẻ',
-                    onTap: () => _navigateToMatchMode(module),
-                  ),
-                  _buildStudyOption(
-                    icon: Icons.rocket_launch,
-                    color: Colors.blue,
-                    label: 'Blast',
-                    onTap: () => _navigateToBlastMode(module),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Row(
+                SliverList(
+                  delegate: SliverChildListDelegate([
+                    const SizedBox(height: 16),
+                    _buildStudyOption(
+                      icon: Icons.style_outlined,
+                      color: Colors.blue,
+                      label: 'Thẻ ghi nhớ',
+                      onTap: () => _navigateToFlashcardsMode(module),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildStudyOption(
+                      icon: Icons.refresh,
+                      color: Colors.purple,
+                      label: 'Học',
+                      onTap: () => _navigateToLearningMode(module),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildStudyOption(
+                      icon: Icons.quiz_outlined,
+                      color: Colors.green,
+                      label: 'Kiểm tra',
+                      onTap: () => _navigateToQuizMode(module),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildStudyOption(
+                      icon: Icons.compare_arrows,
+                      color: Colors.orange,
+                      label: 'Ghép thẻ',
+                      onTap: () => _navigateToMatchMode(module),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildStudyOption(
+                      icon: Icons.rocket_launch,
+                      color: Colors.blue,
+                      label: 'Blast',
+                      onTap: () => _navigateToBlastMode(module),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
                       children: [
                         Expanded(
                           child: QlzButton.secondary(
@@ -374,11 +358,11 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 40),
-                ]),
-              ),
-            ],
+                    const SizedBox(height: 40),
+                  ]),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -392,8 +376,7 @@ class _ModuleDetailScreenState extends State<ModuleDetailScreen> {
     required VoidCallback onTap,
   }) {
     return QlzCard(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.all(16),
       onTap: onTap,
       child: Row(
         children: [

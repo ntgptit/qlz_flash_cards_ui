@@ -1,4 +1,4 @@
-// C:/Users/ntgpt/OneDrive/workspace/qlz_flash_cards_ui/lib/features/module/screens/module_settings_screen.dart
+// lib/features/module/presentation/screens/module_settings_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,12 +12,10 @@ import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
 
 class ModuleSettingsScreen extends StatefulWidget {
   final String moduleId;
-
   const ModuleSettingsScreen({
     super.key,
     this.moduleId = 'new', // Default for new modules
   });
-
   @override
   State<ModuleSettingsScreen> createState() => _ModuleSettingsScreenState();
 }
@@ -26,8 +24,6 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
   @override
   void initState() {
     super.initState();
-    // Không khởi tạo cubit ở đây nữa
-    // Cubit được cung cấp qua BlocProvider
   }
 
   @override
@@ -78,20 +74,20 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
         }
 
         final settings = state.settings;
-
         return Scaffold(
           backgroundColor: const Color(0xFF0A092D),
           appBar: const QlzAppBar(
             title: 'Cài đặt tùy chọn',
           ),
-          body: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(20, 24, 20, 12),
-                  child: Text(
+          body: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 24),
+                  const Text(
                     'NGÔN NGỮ',
                     style: TextStyle(
                       color: Colors.white70,
@@ -99,33 +95,29 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-                _buildSettingSection([
-                  _buildLanguageRow(
-                    'Thuật ngữ',
-                    settings.termLanguage,
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      // Hiển thị dialog chọn ngôn ngữ
-                    },
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
-                    child: Divider(color: Colors.white24, height: 1),
-                  ),
-                  _buildLanguageRow(
-                    'Định nghĩa',
-                    settings.definitionLanguage,
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      // Hiển thị dialog chọn ngôn ngữ
-                    },
-                  ),
-                ]),
-                const SizedBox(height: 32),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
-                  child: Text(
+                  const SizedBox(height: 12),
+                  _buildSettingSection([
+                    _buildLanguageRow(
+                      'Thuật ngữ',
+                      settings.termLanguage,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                      },
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Divider(color: Colors.white24, height: 1),
+                    ),
+                    _buildLanguageRow(
+                      'Định nghĩa',
+                      settings.definitionLanguage,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                      },
+                    ),
+                  ]),
+                  const SizedBox(height: 32),
+                  const Text(
                     'TÙY CHỌN',
                     style: TextStyle(
                       color: Colors.white70,
@@ -133,22 +125,21 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-                _buildSettingSection([
-                  _buildSwitchRow(
-                    'Gợi ý tự động',
-                    value: settings.autoSuggest,
-                    onChanged: (value) {
-                      HapticFeedback.selectionClick();
-                      context
-                          .read<ModuleSettingsCubit>()
-                          .updateAutoSuggest(value);
-                    },
-                  ),
-                ]),
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(20, 32, 20, 12),
-                  child: Text(
+                  const SizedBox(height: 12),
+                  _buildSettingSection([
+                    _buildSwitchRow(
+                      'Gợi ý tự động',
+                      value: settings.autoSuggest,
+                      onChanged: (value) {
+                        HapticFeedback.selectionClick();
+                        context
+                            .read<ModuleSettingsCubit>()
+                            .updateAutoSuggest(value);
+                      },
+                    ),
+                  ]),
+                  const SizedBox(height: 32),
+                  const Text(
                     'QUYỀN RIÊNG TƯ',
                     style: TextStyle(
                       color: Colors.white70,
@@ -156,38 +147,36 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
-                _buildSettingSection([
-                  _buildPermissionRow(
-                    'Ai có thể xem',
-                    settings.viewPermission,
-                    ['Mọi người', 'Chỉ tôi'],
-                    (value) {
-                      context
-                          .read<ModuleSettingsCubit>()
-                          .updateViewPermission(value);
-                    },
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20),
-                    child: Divider(color: Colors.white24, height: 1),
-                  ),
-                  _buildPermissionRow(
-                    'Ai có thể sửa',
-                    settings.editPermission,
-                    ['Mọi người', 'Chỉ tôi'],
-                    (value) {
-                      context
-                          .read<ModuleSettingsCubit>()
-                          .updateEditPermission(value);
-                    },
-                  ),
-                ]),
-                const SizedBox(height: 32),
-                if (widget.moduleId != 'new')
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: QlzButton.danger(
+                  const SizedBox(height: 12),
+                  _buildSettingSection([
+                    _buildPermissionRow(
+                      'Ai có thể xem',
+                      settings.viewPermission,
+                      ['Mọi người', 'Chỉ tôi'],
+                      (value) {
+                        context
+                            .read<ModuleSettingsCubit>()
+                            .updateViewPermission(value);
+                      },
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Divider(color: Colors.white24, height: 1),
+                    ),
+                    _buildPermissionRow(
+                      'Ai có thể sửa',
+                      settings.editPermission,
+                      ['Mọi người', 'Chỉ tôi'],
+                      (value) {
+                        context
+                            .read<ModuleSettingsCubit>()
+                            .updateEditPermission(value);
+                      },
+                    ),
+                  ]),
+                  if (widget.moduleId != 'new') ...[
+                    const SizedBox(height: 32),
+                    QlzButton.danger(
                       label: 'Xóa học phần',
                       icon: Icons.delete_outline,
                       onPressed: () {
@@ -196,9 +185,10 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
                       },
                       isFullWidth: true,
                     ),
-                  ),
-                const SizedBox(height: 32),
-              ],
+                  ],
+                  const SizedBox(height: 32),
+                ],
+              ),
             ),
           ),
         );
@@ -217,7 +207,6 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
       isDanger: true,
     ).then((confirmed) {
       if (confirmed) {
-        // Xóa học phần và quay lại màn hình trước
         Navigator.pop(context);
       }
     });
@@ -226,7 +215,6 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
   Widget _buildSettingSection(List<Widget> children) {
     return QlzCard(
       padding: EdgeInsets.zero,
-      margin: const EdgeInsets.symmetric(horizontal: 20),
       borderRadius: BorderRadius.circular(12),
       child: Column(
         children: children,
@@ -240,7 +228,7 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
     VoidCallback? onTap,
   }) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       title: Text(
         title,
         style: const TextStyle(
@@ -272,7 +260,7 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
     required ValueChanged<bool> onChanged,
   }) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       title: Text(
         title,
         style: const TextStyle(
@@ -295,7 +283,7 @@ class _ModuleSettingsScreenState extends State<ModuleSettingsScreen> {
     ValueChanged<String> onChanged,
   ) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       title: Text(
         title,
         style: const TextStyle(
