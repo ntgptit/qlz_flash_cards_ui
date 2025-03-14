@@ -88,6 +88,9 @@ class _QuizQuestionSettingsState extends State<QuizQuestionSettings> {
 
     // Cập nhật state
     widget.onQuestionCountChanged(validatedCount);
+
+    // Cập nhật state ngay lập tức để Slider cũng được cập nhật
+    setState(() {});
   }
 
   @override
@@ -121,7 +124,8 @@ class _QuizQuestionSettingsState extends State<QuizQuestionSettings> {
             if (value.isNotEmpty) {
               final count = int.tryParse(value);
               if (count != null) {
-                widget.onQuestionCountChanged(count);
+                // Cập nhật ngay lập tức, không chờ đến khi mất focus
+                _validateAndUpdateQuestionCount();
               }
             }
           },

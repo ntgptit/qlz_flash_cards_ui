@@ -6,13 +6,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/core/providers/app_providers.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_settings.dart';
+import 'package:qlz_flash_cards_ui/features/quiz/data/services/quiz_service.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/logic/cubit/quiz_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/logic/cubit/quiz_settings_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/presentation/screens/quiz_screen.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/presentation/screens/quiz_screen_settings.dart';
 
 /// Module quản lý tính năng quiz
-class QuizModule {
+final class QuizModule {
   const QuizModule._();
 
   /// Cung cấp màn hình thiết lập quiz
@@ -24,7 +25,7 @@ class QuizModule {
     return MultiBlocProvider(
       providers: [
         BlocProvider<QuizSettingsCubit>(
-          create: (_) => QuizSettingsCubit(),
+          create: (_) => QuizSettingsCubit()..initialize(flashcards.length),
         ),
       ],
       child: QuizScreenSettings(
@@ -43,6 +44,7 @@ class QuizModule {
     required List<Flashcard> flashcards,
   }) {
     final quizSettingsCubit = ref.read(quizSettingsCubitProvider);
+    quizSettingsCubit.initialize(flashcards.length);
 
     return BlocProvider.value(
       value: quizSettingsCubit,
@@ -58,30 +60,14 @@ class QuizModule {
   static Widget provideQuizScreen({
     required Map<String, dynamic> quizData,
   }) {
-    final quizType = quizData['quizType'] as QuizType;
-    final difficulty = quizData['difficulty'] as QuizDifficulty;
-    final flashcards = quizData['flashcards'] as List<Flashcard>;
-    final moduleId = quizData['moduleId'] as String;
-    final moduleName = quizData['moduleName'] as String;
-    final questionCount = quizData['questionCount'] as int;
-    final shuffleQuestions = quizData['shuffleQuestions'] as bool;
-    final showCorrectAnswers = quizData['showCorrectAnswers'] as bool;
-    final enableTimer = quizData['enableTimer'] as bool;
-    final timePerQuestion = quizData['timePerQuestion'] as int;
+    final quizService = QuizService();
+    final quizCubit = QuizCubit(quizService: quizService);
+
+    // Khởi tạo Cubit với dữ liệu quiz
+    _initializeQuizCubit(quizCubit, quizData);
 
     return BlocProvider<QuizCubit>(
-      create: (context) => QuizCubit(
-        quizType: quizType,
-        difficulty: difficulty,
-        flashcards: flashcards,
-        moduleId: moduleId,
-        moduleName: moduleName,
-        questionCount: questionCount,
-        shuffleQuestions: shuffleQuestions,
-        showCorrectAnswers: showCorrectAnswers,
-        enableTimer: enableTimer,
-        timePerQuestion: timePerQuestion,
-      ),
+      create: (context) => quizCubit,
       child: const QuizScreen(),
     );
   }
@@ -94,6 +80,17 @@ class QuizModule {
     final quizCubit = ref.read(quizCubitProvider);
 
     // Khởi tạo Cubit với dữ liệu quiz
+    _initializeQuizCubit(quizCubit, quizData);
+
+    return BlocProvider.value(
+      value: quizCubit,
+      child: const QuizScreen(),
+    );
+  }
+
+  // Helper method để khởi tạo QuizCubit, giảm code trùng lặp
+  static void _initializeQuizCubit(
+      QuizCubit quizCubit, Map<String, dynamic> quizData) {
     quizCubit.initialize(
       quizType: quizData['quizType'] as QuizType,
       difficulty: quizData['difficulty'] as QuizDifficulty,
@@ -105,11 +102,6 @@ class QuizModule {
       showCorrectAnswers: quizData['showCorrectAnswers'] as bool,
       enableTimer: quizData['enableTimer'] as bool,
       timePerQuestion: quizData['timePerQuestion'] as int,
-    );
-
-    return BlocProvider.value(
-      value: quizCubit,
-      child: const QuizScreen(),
     );
   }
 }

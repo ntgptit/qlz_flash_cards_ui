@@ -1,6 +1,7 @@
 // lib/features/quiz/logic/states/quiz_state.dart
 
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_answer.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_question.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_settings.dart';
@@ -14,6 +15,7 @@ enum QuizStatus {
 }
 
 /// State quản lý trạng thái của màn hình quiz
+@immutable
 class QuizState extends Equatable {
   /// Loại bài kiểm tra
   final QuizType quizType;

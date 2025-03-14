@@ -1,13 +1,12 @@
 // lib/features/quiz/logic/cubit/quiz_cubit.dart
 
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_answer.dart';
-import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_question.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_settings.dart';
+import 'package:qlz_flash_cards_ui/features/quiz/data/services/quiz_service.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/logic/states/quiz_state.dart';
 
 /// Cubit quản lý trạng thái của màn hình quiz
@@ -18,32 +17,14 @@ class QuizCubit extends Cubit<QuizState> {
   /// Timer đếm thời gian tổng quát
   Timer? _quizTimer;
 
+  /// Service xử lý logic quiz
+  final QuizService _quizService;
+
   /// Constructor
   QuizCubit({
-    QuizType quizType = QuizType.multipleChoice,
-    QuizDifficulty difficulty = QuizDifficulty.medium,
-    List<Flashcard> flashcards = const [],
-    String moduleId = '',
-    String moduleName = '',
-    int questionCount = 10,
-    bool shuffleQuestions = true,
-    bool showCorrectAnswers = true,
-    bool enableTimer = false,
-    int timePerQuestion = 30,
-  }) : super(const QuizState()) {
-    initialize(
-      quizType: quizType,
-      difficulty: difficulty,
-      flashcards: flashcards,
-      moduleId: moduleId,
-      moduleName: moduleName,
-      questionCount: questionCount,
-      shuffleQuestions: shuffleQuestions,
-      showCorrectAnswers: showCorrectAnswers,
-      enableTimer: enableTimer,
-      timePerQuestion: timePerQuestion,
-    );
-  }
+    required QuizService quizService,
+  })  : _quizService = quizService,
+        super(const QuizState());
 
   /// Khởi tạo trạng thái quiz
   void initialize({
@@ -59,12 +40,19 @@ class QuizCubit extends Cubit<QuizState> {
     required int timePerQuestion,
   }) {
     // Chọn flashcards để tạo câu hỏi
-    final selectedFlashcards =
-        _selectFlashcards(flashcards, questionCount, shuffleQuestions);
+    final selectedFlashcards = _quizService.selectFlashcards(
+      flashcards,
+      questionCount,
+      shuffleQuestions,
+    );
 
     // Tạo danh sách câu hỏi
-    final questions =
-        _createQuestions(selectedFlashcards, quizType, difficulty);
+    final questions = _quizService.createQuestions(
+      selectedFlashcards,
+      quizType,
+      difficulty,
+      flashcards,
+    );
 
     // Cập nhật trạng thái
     emit(state.copyWith(
@@ -87,37 +75,6 @@ class QuizCubit extends Cubit<QuizState> {
 
     // Bắt đầu đếm thời gian làm bài
     _startQuizTimer();
-  }
-
-  /// Chọn flashcards để tạo câu hỏi
-  List<Flashcard> _selectFlashcards(
-      List<Flashcard> flashcards, int count, bool shuffle) {
-    if (flashcards.isEmpty) return [];
-
-    // Giới hạn số lượng flashcards
-    final effectiveCount = min(count, flashcards.length);
-
-    if (shuffle) {
-      // Tạo một bản sao để không ảnh hưởng đến danh sách gốc
-      final shuffled = List<Flashcard>.from(flashcards);
-      shuffled.shuffle();
-      return shuffled.take(effectiveCount).toList();
-    } else {
-      return flashcards.take(effectiveCount).toList();
-    }
-  }
-
-  /// Tạo danh sách câu hỏi từ flashcards
-  List<QuizQuestion> _createQuestions(List<Flashcard> flashcards,
-      QuizType quizType, QuizDifficulty difficulty) {
-    return flashcards.map((flashcard) {
-      return QuizQuestion.fromFlashcard(
-        flashcard: flashcard,
-        quizType: quizType,
-        difficulty: difficulty,
-        allFlashcards: flashcards,
-      );
-    }).toList();
   }
 
   /// Bắt đầu đếm thời gian cho câu hỏi hiện tại
@@ -263,11 +220,13 @@ class QuizCubit extends Cubit<QuizState> {
   /// Kết thúc bài kiểm tra
   void _finishQuiz() {
     // Dừng các timer
-    _questionTimer?.cancel();
-    _quizTimer?.cancel();
+    _stopAllTimers();
 
     // Tính điểm và thống kê
-    final (score, correctCount) = _calculateScore();
+    final (score, correctCount) = _quizService.calculateScore(
+      state.questions,
+      state.userAnswers,
+    );
 
     // Cập nhật trạng thái
     emit(state.copyWith(
@@ -275,30 +234,6 @@ class QuizCubit extends Cubit<QuizState> {
       score: score,
       correctAnswersCount: correctCount,
     ));
-  }
-
-  /// Tính điểm và số câu trả lời đúng
-  (double, int) _calculateScore() {
-    int correctCount = 0;
-
-    // Đếm số câu trả lời đúng
-    for (int i = 0; i < state.questions.length; i++) {
-      if (i < state.userAnswers.length && state.userAnswers[i] != null) {
-        final userAnswer = state.userAnswers[i]!;
-        final correctAnswer = state.questions[i].correctAnswer;
-
-        if (userAnswer.id == correctAnswer.id) {
-          correctCount++;
-        }
-      }
-    }
-
-    // Tính điểm (tỷ lệ phần trăm)
-    final score = state.questions.isEmpty
-        ? 0.0
-        : (correctCount / state.questions.length) * 100;
-
-    return (score, correctCount);
   }
 
   /// Bắt đầu lại bài kiểm tra
@@ -334,8 +269,7 @@ class QuizCubit extends Cubit<QuizState> {
   /// Thoát khỏi bài kiểm tra
   void exitQuiz() {
     // Dừng các timer
-    _questionTimer?.cancel();
-    _quizTimer?.cancel();
+    _stopAllTimers();
 
     // Cập nhật trạng thái
     emit(state.copyWith(
@@ -343,11 +277,16 @@ class QuizCubit extends Cubit<QuizState> {
     ));
   }
 
+  /// Dừng tất cả các timer
+  void _stopAllTimers() {
+    _questionTimer?.cancel();
+    _quizTimer?.cancel();
+  }
+
   @override
   Future<void> close() {
     // Đảm bảo dừng tất cả timer khi cubit bị hủy
-    _questionTimer?.cancel();
-    _quizTimer?.cancel();
+    _stopAllTimers();
     return super.close();
   }
 }

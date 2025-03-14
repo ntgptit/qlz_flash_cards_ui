@@ -1,3 +1,5 @@
+// lib/features/quiz/presentation/screens/quiz_screen_settings.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
@@ -43,13 +45,6 @@ class _QuizScreenSettingsState extends State<QuizScreenSettings> {
 
   // Biến để tracking nếu form đã được submit
   bool _hasAttemptedSubmit = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Khởi tạo settings cubit
-    context.read<QuizSettingsCubit>().initialize(widget.flashcards.length);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -170,7 +165,11 @@ class _QuizScreenSettingsState extends State<QuizScreenSettings> {
 
   // Xử lý khi chọn loại quiz
   void _onQuizTypeSelected(BuildContext context, QuizType type) {
-    context.read<QuizSettingsCubit>().setQuizType(type);
+    // Kiểm tra trạng thái của cubit trước khi emit
+    final cubit = context.read<QuizSettingsCubit>();
+    if (cubit.isClosed) return; // Thêm kiểm tra này để tránh lỗi
+
+    cubit.setQuizType(type);
 
     // Hiển thị tooltip giải thích
     final description = QuizTypeHelper.getQuizTypeDescription(type);
