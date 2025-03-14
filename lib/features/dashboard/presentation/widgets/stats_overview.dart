@@ -52,7 +52,16 @@ class StatsOverview extends StatelessWidget {
 
   void _showSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        backgroundColor: AppColors.darkSurface,
+        duration: const Duration(seconds: 2),
+        margin: const EdgeInsets.all(16),
+      ),
     );
   }
 }

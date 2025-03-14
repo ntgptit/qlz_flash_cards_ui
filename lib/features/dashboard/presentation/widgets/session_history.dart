@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/core/utils/time_formatter.dart';
 import 'package:qlz_flash_cards_ui/features/dashboard/data/models/study_history_model.dart';
-import 'package:qlz_flash_cards_ui/shared/widgets/cards/qlz_card_item.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_empty_state.dart';
 
 class SessionHistory extends StatelessWidget {
@@ -40,57 +39,51 @@ class SessionHistory extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16), // Chuẩn 16
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'LỊCH SỬ HỌC TẬP',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.darkText,
-                    ),
-              ),
-              if (sessions.length > maxSessions)
-                GestureDetector(
-                  onTap: onViewAll,
-                  child: Row(
-                    children: [
-                      Text(
-                        'Xem tất cả',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.arrow_forward_ios,
-                        size: 12,
-                        color: AppColors.primary,
-                      ),
-                    ],
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'LỊCH SỬ HỌC TẬP',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.darkText,
                   ),
+            ),
+            if (sessions.length > maxSessions)
+              GestureDetector(
+                onTap: onViewAll,
+                child: Row(
+                  children: [
+                    Text(
+                      'Xem tất cả',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 12,
+                      color: AppColors.primary,
+                    ),
+                  ],
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
-        const SizedBox(height: 16), // Chuẩn hóa khoảng cách dọc thành 16
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16), // Chuẩn 16
-          child: ListView.builder(
-            shrinkWrap: true, // Đảm bảo không chiếm toàn bộ màn hình
-            physics: const NeverScrollableScrollPhysics(), // Tắt cuộn riêng
-            itemCount: displaySessions.length,
-            itemBuilder: (context, index) {
-              return _buildSessionItem(
-                context,
-                displaySessions[index],
-                showDivider: index < displaySessions.length - 1,
-              );
-            },
-          ),
+        const SizedBox(height: 16),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: displaySessions.length,
+          itemBuilder: (context, index) {
+            return _buildSessionItem(
+              context,
+              displaySessions[index],
+              showDivider: index < displaySessions.length - 1,
+            );
+          },
         ),
       ],
     );
@@ -100,50 +93,106 @@ class SessionHistory extends StatelessWidget {
       {bool showDivider = true}) {
     return Column(
       children: [
-        QlzCardItem(
-          icon: Icons.menu_book_outlined,
-          iconColor: AppColors.primary,
-          title: session.moduleName,
-          titleStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.darkText,
-                fontWeight: FontWeight.w500,
-                fontSize: 15, // Giảm từ 16 xuống 15
-              ),
-          subtitle: TimeFormatter.formatDateTime(session.date),
-          subtitleStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.darkTextSecondary.withOpacity(0.85),
-                fontSize: 12, // Chuẩn 12sp
-              ),
-          trailing: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '${session.termsLearned}/${session.termsStudied} từ',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: session.termsLearned > 0
-                          ? AppColors.success
-                          : AppColors.darkText.withOpacity(0.9),
-                      fontSize: 14, // Chuẩn 14sp
+        Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          clipBehavior: Clip.antiAlias,
+          child: Ink(
+            decoration: BoxDecoration(
+              color: Colors
+                  .transparent, // Transparent để không có background khi không tap
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: InkWell(
+              onTap: () => onSessionTap?.call(session),
+              splashColor: AppColors.primary.withOpacity(0.1),
+              highlightColor: AppColors.primary.withOpacity(0.05),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.menu_book_outlined,
+                        color: AppColors.primary,
+                        size: 24,
+                      ),
                     ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                TimeFormatter.formatDuration(session.durationSeconds),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.darkTextSecondary.withOpacity(0.85),
-                      fontSize: 12, // Chuẩn 12sp
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            session.moduleName,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: AppColors.darkText,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 15,
+                                ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            TimeFormatter.formatDateTime(session.date),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: AppColors.darkTextSecondary
+                                          .withOpacity(0.85),
+                                      fontSize: 12,
+                                    ),
+                          ),
+                        ],
+                      ),
                     ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${session.termsLearned}/${session.termsStudied} từ',
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: session.termsLearned > 0
+                                        ? AppColors.success
+                                        : AppColors.darkText.withOpacity(0.9),
+                                    fontSize: 14,
+                                  ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          TimeFormatter.formatDuration(session.durationSeconds),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.darkTextSecondary
+                                        .withOpacity(0.85),
+                                    fontSize: 12,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ],
+            ),
           ),
-          onTap: () => onSessionTap?.call(session),
         ),
         if (showDivider)
           const Padding(
-            padding: EdgeInsets.only(top: 16),
+            padding: EdgeInsets.only(
+                left: 80), // Đẩy divider sang phải, bắt đầu từ sau icon
             child: Divider(
-              height: 1.5, // Tăng từ 1 lên 1.5
+              height: 1.5,
               color: AppColors.darkBorder,
             ),
           ),

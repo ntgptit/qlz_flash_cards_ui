@@ -19,6 +19,10 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  // Giá trị padding chuẩn hóa
+  static const double horizontalPadding = 16.0;
+  static const double verticalSpacing = 16.0;
+
   @override
   void initState() {
     super.initState();
@@ -30,7 +34,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
       body: BlocBuilder<DashboardCubit, DashboardState>(
-        buildWhen: (previous, current) => previous.status != current.status,
+        buildWhen: (previous, current) =>
+            previous.status != current.status ||
+            previous.selectedTimePeriod != current.selectedTimePeriod,
         builder: (context, state) {
           if (state.status == DashboardStatus.initial ||
               (state.status == DashboardStatus.loading &&
@@ -72,16 +78,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ?.copyWith(color: AppColors.darkTextSecondary),
           ),
           const SizedBox(height: 16),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
+          QlzButton.primary(
+            label: 'Thử lại',
             onPressed: () => context.read<DashboardCubit>().refreshDashboard(),
-            child: const Text('Thử lại', style: TextStyle(fontSize: 16)),
           ),
         ],
       ),
@@ -94,56 +93,84 @@ class _DashboardScreenState extends State<DashboardScreen> {
       slivers: [
         _buildSliverAppBar(),
         SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.only(top: 8), // Chỉ thêm padding top
           sliver: SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                switch (index) {
-                  case 0:
-                    return state.hasStudiedToday
-                        ? const SizedBox.shrink()
-                        : _buildTodayGoalCard();
-                  case 1:
-                    return StatsOverview(state: state);
-                  case 2:
-                    return StreakCard(
-                      currentStreak: state.stats.currentStreak,
-                      longestStreak: state.stats.longestStreak,
-                      hasStudiedToday: state.hasStudiedToday,
-                      onTap: () => _showMotivationSnackBar(context),
-                    );
-                  case 3:
-                    return StudyActivityChart(
-                      dailyStudyTime: state.filteredHistory.dailyStudyTime,
-                      dailyTermsLearned:
-                          state.filteredHistory.dailyTermsLearned,
-                      timePeriod: state.selectedTimePeriod,
-                      onPeriodChanged: (period) => context
-                          .read<DashboardCubit>()
-                          .changeTimePeriod(period),
-                    );
-                  case 4:
-                    return RecommendedModules(
-                      modules: state.recommendedModules,
-                      onViewAll: () =>
-                          _showSnackBar(context, 'Xem tất cả học phần'),
-                      onModuleTap: (module) =>
-                          _navigateToModuleDetail(context, module),
-                    );
-                  case 5:
-                    return SessionHistory(
-                      sessions: state.filteredHistory.sessions,
-                      onViewAll: () =>
-                          _showSnackBar(context, 'Xem toàn bộ lịch sử'),
-                      onSessionTap: (session) => _showSnackBar(
-                          context, 'Chi tiết phiên: ${session.moduleName}'),
-                    );
-                  default:
-                    return const SizedBox.shrink();
-                }
-              },
-              childCount: 6,
-            ),
+            delegate: SliverChildListDelegate([
+              if (!state.hasStudiedToday)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: horizontalPadding,
+                    vertical: 8,
+                  ),
+                  child: _buildTodayGoalCard(),
+                ),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: 8,
+                ),
+                child: StatsOverview(state: state),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: 8,
+                ),
+                child: StreakCard(
+                  currentStreak: state.stats.currentStreak,
+                  longestStreak: state.stats.longestStreak,
+                  hasStudiedToday: state.hasStudiedToday,
+                  onTap: () => _showMotivationSnackBar(context),
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: 8,
+                ),
+                child: StudyActivityChart(
+                  dailyStudyTime: state.filteredHistory.dailyStudyTime,
+                  dailyTermsLearned: state.filteredHistory.dailyTermsLearned,
+                  timePeriod: state.selectedTimePeriod,
+                  onPeriodChanged: (period) =>
+                      context.read<DashboardCubit>().changeTimePeriod(period),
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: 8,
+                ),
+                child: RecommendedModules(
+                  modules: state.recommendedModules,
+                  onViewAll: () =>
+                      _showSnackBar(context, 'Xem tất cả học phần'),
+                  onModuleTap: (module) =>
+                      _navigateToModuleDetail(context, module),
+                ),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: 8,
+                ),
+                child: SessionHistory(
+                  sessions: state.filteredHistory.sessions,
+                  onViewAll: () =>
+                      _showSnackBar(context, 'Xem toàn bộ lịch sử'),
+                  onSessionTap: (session) => _showSnackBar(
+                      context, 'Chi tiết phiên: ${session.moduleName}'),
+                ),
+              ),
+
+              // Thêm padding bottom để tránh bị che bởi bottom navigation bar
+              const SizedBox(height: 16),
+            ]),
           ),
         ),
       ],
@@ -158,7 +185,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       floating: true,
       pinned: true,
       flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.only(left: 16, bottom: 16),
+        titlePadding:
+            const EdgeInsets.only(left: horizontalPadding, bottom: 16),
         title: Text(
           'Tổng quan học tập',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -189,6 +217,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           icon: const Icon(Icons.notifications_none,
               color: AppColors.primary, size: 28),
           onPressed: () => _showSnackBar(context, 'Thông báo đang phát triển'),
+          padding: const EdgeInsets.only(right: horizontalPadding),
         ),
       ],
     );
@@ -196,7 +225,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildTodayGoalCard() {
     return Card(
-      elevation: 4,
+      elevation: 0,
       color: AppColors.darkCard,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
@@ -245,7 +274,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         backgroundColor: AppColors.darkSurface,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
+        margin: const EdgeInsets.all(horizontalPadding),
       ),
     );
   }

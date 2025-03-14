@@ -45,7 +45,36 @@ class DashboardCubit extends Cubit<DashboardState> {
 
   /// Change the selected time period for history display
   void changeTimePeriod(int days) {
-    emit(state.copyWith(selectedTimePeriod: days));
+    print(
+        'DashboardCubit: Changing time period from ${state.selectedTimePeriod} to $days');
+
+    // Chỉ emit state mới khi có sự thay đổi thực sự
+    if (state.selectedTimePeriod != days) {
+      final newState = state.copyWith(selectedTimePeriod: days);
+      emit(newState);
+      print(
+          'DashboardCubit: State emitted with new period: ${newState.selectedTimePeriod}');
+    } else {
+      print('DashboardCubit: No change in time period, not emitting new state');
+    }
+  }
+
+  void forceRefreshTimePeriod(int days) {
+    // Đặt lại status thành loading rồi success để đảm bảo UI được refresh
+    print('DashboardCubit: Force refreshing with time period $days');
+
+    emit(state.copyWith(
+        status: DashboardStatus.loading, selectedTimePeriod: days));
+
+    // Sau một khoảng thời gian nhỏ, emit lại status success
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (isClosed) return; // Kiểm tra cubit đã bị đóng chưa
+
+      emit(state.copyWith(
+          status: DashboardStatus.success, selectedTimePeriod: days));
+
+      print('DashboardCubit: Forced refresh completed with period: $days');
+    });
   }
 
   /// Record a new study session

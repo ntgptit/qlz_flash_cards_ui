@@ -34,7 +34,7 @@ class StreakCard extends StatelessWidget {
       return const QlzCard(
         backgroundColor: AppColors.darkCard,
         padding: EdgeInsets.all(16),
-        margin: EdgeInsets.all(16), // Chuẩn hóa margin thành 16
+        // Đã loại bỏ margin
         child: Text(
           'Dữ liệu chuỗi ngày không hợp lệ',
           style: TextStyle(color: AppColors.error),
@@ -44,8 +44,8 @@ class StreakCard extends StatelessWidget {
 
     return QlzCard(
       backgroundColor: AppColors.darkCard,
-      padding: const EdgeInsets.all(16), // Chuẩn 16
-      margin: const EdgeInsets.all(16), // Chuẩn hóa margin thành 16
+      padding: const EdgeInsets.all(16),
+      // Đã loại bỏ margin
       onTap: onTap,
       child: Column(
         children: [

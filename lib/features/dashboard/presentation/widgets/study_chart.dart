@@ -32,11 +32,12 @@ class StudyActivityChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print('StudyActivityChart building with timePeriod: $timePeriod');
+
     if (timePeriod <= 0 || !periodOptions.contains(timePeriod)) {
       return const QlzCard(
         backgroundColor: AppColors.darkCard,
         padding: EdgeInsets.all(16),
-        margin: EdgeInsets.all(16),
         child: Text('Khoảng thời gian không hợp lệ',
             style: TextStyle(color: AppColors.error)),
       );
@@ -45,7 +46,6 @@ class StudyActivityChart extends StatelessWidget {
       return const QlzCard(
         backgroundColor: AppColors.darkCard,
         padding: EdgeInsets.all(16),
-        margin: EdgeInsets.all(16),
         child: Text('Chưa có dữ liệu hoạt động',
             style: TextStyle(color: AppColors.darkText)),
       );
@@ -53,7 +53,6 @@ class StudyActivityChart extends StatelessWidget {
     return QlzCard(
       backgroundColor: AppColors.darkCard,
       padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -65,7 +64,7 @@ class StudyActivityChart extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: AppColors.darkText,
                       fontWeight: FontWeight.bold,
-                      fontSize: 16, // Chuẩn 16sp
+                      fontSize: 16,
                     ),
               ),
               _buildPeriodDropdown(context),
@@ -73,7 +72,7 @@ class StudyActivityChart extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           SizedBox(
-            height: 220, // Tăng từ 200 lên 220
+            height: 220,
             child: _buildChart(context),
           ),
           const SizedBox(height: 16),
@@ -84,61 +83,116 @@ class StudyActivityChart extends StatelessWidget {
   }
 
   Widget _buildPeriodDropdown(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.darkBorder),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<int>(
-          value: timePeriod,
-          icon: const Icon(Icons.arrow_drop_down,
-              color: AppColors.darkTextSecondary),
-          dropdownColor: AppColors.darkCard,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.darkText,
-              ),
-          onChanged: (int? newValue) {
-            if (newValue != null) {
-              onPeriodChanged(newValue);
-            }
-          },
-          items: periodOptions.map<DropdownMenuItem<int>>((int value) {
-            String label;
-            switch (value) {
-              case 7:
-                label = '7 ngày';
-                break;
-              case 14:
-                label = '14 ngày';
-                break;
-              case 30:
-                label = '30 ngày';
-                break;
-              case 90:
-                label = '3 tháng';
-                break;
-              default:
-                label = '$value ngày';
-            }
-            return DropdownMenuItem<int>(
-              value: value,
-              child: Text(label),
-            );
-          }).toList(),
+    // Đổi sang button hiển thị dialog picker thay vì dropdown
+    return InkWell(
+      onTap: () => _showPeriodPicker(context),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.darkSurface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.darkBorder),
+        ),
+        child: Row(
+          mainAxisSize:
+              MainAxisSize.min, // Đảm bảo container vừa đủ với nội dung
+          children: [
+            Text(
+              _getPeriodLabel(timePeriod),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.darkText,
+                    fontSize: 14, // Giảm kích thước font
+                  ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.arrow_drop_down,
+              color: AppColors.darkTextSecondary,
+              size: 18, // Giảm kích thước icon
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildChart(BuildContext context) {
-    final sortedDates = dailyStudyTime.keys.toList()..sort();
-    final displayDates = sortedDates.length > timePeriod
-        ? sortedDates.sublist(sortedDates.length - timePeriod)
-        : sortedDates;
+  // Hiển thị dialog chọn thời gian thay vì dropdown
+  void _showPeriodPicker(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          backgroundColor: AppColors.darkCard,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Chọn khoảng thời gian',
+                  style:
+                      Theme.of(dialogContext).textTheme.titleMedium?.copyWith(
+                            color: AppColors.darkText,
+                            fontWeight: FontWeight.bold,
+                          ),
+                ),
+                const SizedBox(height: 16),
+                ...periodOptions.map((option) => ListTile(
+                      dense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                      title: Text(
+                        _getPeriodLabel(option),
+                        style: TextStyle(
+                          color: AppColors.darkText,
+                          fontWeight: option == timePeriod
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                      trailing: option == timePeriod
+                          ? const Icon(Icons.check, color: AppColors.primary)
+                          : null,
+                      onTap: () {
+                        // Đóng dialog trước, sau đó mới cập nhật state
+                        Navigator.of(dialogContext).pop();
+                        // Sử dụng context ngoài để tránh gọi sau khi đã dispose
+                        if (option != timePeriod) {
+                          // Thêm print để debug
+                          print(
+                              'Changing time period from $timePeriod to $option');
+                          // Chỉ thực hiện khi có sự thay đổi thực sự
+                          onPeriodChanged(option);
+                        }
+                      },
+                    )),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
+  // Hàm trợ giúp lấy nhãn hiển thị cho khoảng thời gian
+  String _getPeriodLabel(int days) {
+    return switch (days) {
+      7 => '7 ngày',
+      14 => '14 ngày',
+      30 => '30 ngày',
+      90 => '3 tháng',
+      _ => '$days ngày'
+    };
+  }
+
+  Widget _buildChart(BuildContext context) {
+    // Lấy danh sách ngày cần hiển thị
+    final List<String> displayDates = _getDisplayDates();
+
+    // Lấy giá trị lớn nhất để vẽ biểu đồ
     final maxStudyTime = dailyStudyTime.values.isEmpty
         ? 3600
         : dailyStudyTime.values.reduce((a, b) => a > b ? a : b);
@@ -167,7 +221,7 @@ class StudyActivityChart extends StatelessWidget {
 
                     return Expanded(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 1),
                         child: _buildBarGroup(
                           context,
                           studyTimeHeight,
@@ -181,34 +235,108 @@ class StudyActivityChart extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              SizedBox(
-                height: 20,
-                child: Row(
-                  children: displayDates.map((date) {
-                    final parts = date.split('-');
-                    final label =
-                        parts.length >= 3 ? '${parts[2]}/${parts[1]}' : date;
-
-                    return Expanded(
-                      child: Center(
-                        child: Text(
-                          label,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppColors.darkTextSecondary,
-                                  ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
+              _buildDateLabels(context, displayDates),
             ],
           ),
         ),
         _buildRightAxis(context, maxTermsLearned),
       ],
     );
+  }
+
+  // Logic lấy danh sách ngày cần hiển thị theo khoảng thời gian
+  List<String> _getDisplayDates() {
+    // Lấy tất cả ngày từ dữ liệu
+    final Set<String> allDates = {
+      ...dailyStudyTime.keys,
+      ...dailyTermsLearned.keys
+    };
+    final List<String> sortedDates = allDates.toList()..sort();
+
+    // Nếu không đủ dữ liệu, tạo đủ số ngày
+    if (sortedDates.length < timePeriod) {
+      // Lấy ngày cuối cùng trong dữ liệu
+      DateTime lastDate = sortedDates.isEmpty
+          ? DateTime.now()
+          : DateTime.parse(sortedDates.last);
+
+      // Tạo đủ số ngày còn thiếu
+      final List<String> filledDates = List.from(sortedDates);
+
+      for (int i = 0; filledDates.length < timePeriod; i++) {
+        // Tạo ngày mới (trừ đi 1 ngày)
+        final newDate = lastDate.subtract(Duration(days: i + 1));
+        final dateString = _formatDateToString(newDate);
+
+        if (!filledDates.contains(dateString)) {
+          filledDates.add(dateString);
+        }
+      }
+
+      filledDates.sort();
+      // Trả về timePeriod ngày gần nhất
+      return filledDates.length > timePeriod
+          ? filledDates.sublist(filledDates.length - timePeriod)
+          : filledDates;
+    }
+
+    // Nếu đủ dữ liệu, lấy timePeriod ngày gần nhất
+    return sortedDates.length > timePeriod
+        ? sortedDates.sublist(sortedDates.length - timePeriod)
+        : sortedDates;
+  }
+
+  // Format ngày thành chuỗi YYYY-MM-DD
+  String _formatDateToString(DateTime date) {
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  }
+
+  // Widget hiển thị nhãn ngày dưới biểu đồ - tối ưu hiển thị
+  Widget _buildDateLabels(BuildContext context, List<String> dates) {
+    // Tính toán số nhãn cần hiển thị dựa vào độ dài khoảng thời gian
+    final int skipFactor = _calculateSkipFactor(dates.length);
+
+    return SizedBox(
+      height: 20,
+      child: Row(
+        children: dates.asMap().entries.map((entry) {
+          final index = entry.key;
+          final date = entry.value;
+
+          // Chỉ hiển thị một số ngày nhất định để tránh vỡ giao diện
+          final bool shouldShowLabel =
+              index % skipFactor == 0 || index == dates.length - 1;
+
+          final parts = date.split('-');
+          // Format: DD/MM
+          final label = parts.length >= 3 ? '${parts[2]}/${parts[1]}' : '';
+
+          return Expanded(
+            child: Center(
+              child: shouldShowLabel
+                  ? Text(
+                      label,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.darkTextSecondary,
+                            fontSize: 10, // Giảm kích thước font
+                          ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    )
+                  : const SizedBox(), // Ô trống nếu không hiển thị nhãn
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  // Tính toán hệ số bỏ qua các nhãn để tránh vỡ giao diện
+  int _calculateSkipFactor(int totalDates) {
+    if (totalDates <= 7) return 1; // Hiển thị tất cả nếu ≤ 7 ngày
+    if (totalDates <= 14) return 2; // Hiển thị mỗi 2 ngày nếu ≤ 14 ngày
+    if (totalDates <= 30) return 5; // Hiển thị mỗi 5 ngày nếu ≤ 30 ngày
+    return 10; // Hiển thị mỗi 10 ngày nếu > 30 ngày
   }
 
   Widget _buildLeftAxis(BuildContext context, int maxValue) {
@@ -227,9 +355,8 @@ class StudyActivityChart extends StatelessWidget {
           return Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.darkTextSecondary
-                      .withOpacity(0.85), // Tăng độ sáng
-                  fontSize: 13, // Tăng từ 12 lên 13
+                  color: AppColors.darkTextSecondary.withOpacity(0.85),
+                  fontSize: 11, // Giảm kích thước font từ 13 xuống 11
                 ),
           );
         }).toList(),
@@ -252,6 +379,7 @@ class StudyActivityChart extends StatelessWidget {
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppColors.darkTextSecondary,
+                  fontSize: 11, // Giảm kích thước font từ 12 xuống 11
                 ),
           );
         }).toList(),
@@ -272,10 +400,10 @@ class StudyActivityChart extends StatelessWidget {
                 message: _formatTime(studyTimeValue),
                 textStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.darkText,
-                      fontSize: 13, // Chuẩn 13sp
+                      fontSize: 12,
                     ),
                 decoration: BoxDecoration(
-                  color: AppColors.darkSurface.withOpacity(0.9), // Tăng opacity
+                  color: AppColors.darkSurface.withOpacity(0.9),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Container(
@@ -290,7 +418,7 @@ class StudyActivityChart extends StatelessWidget {
             },
           ),
         ),
-        const SizedBox(width: 1), // Giảm từ 2 xuống 1
+        const SizedBox(width: 1),
         Expanded(
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -299,10 +427,10 @@ class StudyActivityChart extends StatelessWidget {
                 message: '$termsLearnedValue từ',
                 textStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppColors.darkText,
-                      fontSize: 13, // Chuẩn 13sp
+                      fontSize: 12,
                     ),
                 decoration: BoxDecoration(
-                  color: AppColors.darkSurface.withOpacity(0.9), // Tăng opacity
+                  color: AppColors.darkSurface.withOpacity(0.9),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Container(
@@ -348,6 +476,7 @@ class StudyActivityChart extends StatelessWidget {
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: AppColors.darkTextSecondary,
+                fontSize: 13, // Giảm kích thước font
               ),
         ),
       ],
