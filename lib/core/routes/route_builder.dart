@@ -86,23 +86,17 @@ class RouteBuilder {
           },
         ),
 
-    AppRoutes.studyFlashcards: (params) => Consumer(
-          builder: (context, ref, _) {
-            final flashcards = params.getFlashcards('flashcards');
+    AppRoutes.studyFlashcards: (params) {
+      final flashcards = params.getFlashcards('flashcards');
+      final initialIndex = params.getInt('initialIndex', 0);
+      final validInitialIndex =
+          flashcards.isEmpty ? 0 : initialIndex.clamp(0, flashcards.length - 1);
 
-            // Validate initialIndex để tránh lỗi khi flashcards rỗng
-            final initialIndex = params.getInt('initialIndex', 0);
-            final validInitialIndex = flashcards.isEmpty
-                ? 0
-                : initialIndex.clamp(0, flashcards.length - 1);
-
-            return FlashcardModule.provideRiverpodStudyModeScreen(
-              ref: ref,
-              flashcards: flashcards,
-              initialIndex: validInitialIndex,
-            );
-          },
-        ),
+      return FlashcardModule.provideStudyModeScreen(
+        flashcards: flashcards,
+        initialIndex: validInitialIndex,
+      );
+    },
 
     AppRoutes.quizSettings: (params) => Consumer(
           builder: (context, ref, _) {

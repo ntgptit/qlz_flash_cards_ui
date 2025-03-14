@@ -1,14 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
-import 'package:qlz_flash_cards_ui/features/flashcard/logic/cubit/flashcard_cubit.dart';
-import 'package:qlz_flash_cards_ui/features/flashcard/logic/states/flashcard_state.dart';
-import 'package:qlz_flash_cards_ui/features/flashcard/widgets/flashcard_progress_bar.dart';
-import 'package:qlz_flash_cards_ui/features/flashcard/widgets/flashcard_result_dialog.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/domain/states/flashcard_state.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/presentation/providers/flashcard_provider.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/presentation/widgets/flashcard_progress_bar.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/presentation/widgets/flashcard_result_dialog.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_empty_state.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_loading_state.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_snackbar.dart';
@@ -16,7 +16,7 @@ import 'package:qlz_flash_cards_ui/shared/widgets/layout/qlz_modal.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/study/qlz_flashcard.dart';
 
-class FlashcardStudyModeScreen extends StatelessWidget {
+class FlashcardStudyModeScreen extends ConsumerWidget {
   final List<Flashcard> flashcards;
   final int initialIndex;
 
@@ -27,38 +27,33 @@ class FlashcardStudyModeScreen extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => FlashcardCubit(
-        context.read(),
-      )..initializeFlashcards(
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Initialize flashcards when the screen is first built
+    ref.read(flashcardProvider.notifier).initializeFlashcards(
           flashcards,
-          initialIndex.clamp(
-              0, flashcards.isEmpty ? 0 : flashcards.length - 1)),
-      child: const FlashcardStudyModeView(),
-    );
+          initialIndex.clamp(0, flashcards.isEmpty ? 0 : flashcards.length - 1),
+        );
+
+    return const FlashcardStudyModeView();
   }
 }
 
-class FlashcardStudyModeView extends StatefulWidget {
+class FlashcardStudyModeView extends ConsumerStatefulWidget {
   const FlashcardStudyModeView({super.key});
 
   @override
-  State<FlashcardStudyModeView> createState() => _FlashcardStudyModeViewState();
+  ConsumerState<FlashcardStudyModeView> createState() =>
+      _FlashcardStudyModeViewState();
 }
 
-class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
-  // Controllers
+class _FlashcardStudyModeViewState
+    extends ConsumerState<FlashcardStudyModeView> {
   final CardSwiperController _cardSwiperController = CardSwiperController();
   final Map<String, QlzFlashcardController> _flashcardControllers = {};
-
-  // State variables
   bool _dialogShown = false;
   bool _isAutoPlayEnabled = false;
   Timer? _autoPlayTimer;
   bool _isAutoSwiping = false;
-
-  // Ghi nhớ flashcard hiện tại
   Flashcard? _currentFlashcard;
 
   @override
@@ -67,7 +62,6 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
     super.dispose();
   }
 
-  // Tạo hoặc lấy controller cho một flashcard cụ thể
   QlzFlashcardController _getFlashcardController(String flashcardId) {
     if (!_flashcardControllers.containsKey(flashcardId)) {
       _flashcardControllers[flashcardId] = QlzFlashcardController();
@@ -76,8 +70,7 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
   }
 
   void _showCompletionDialog(BuildContext context) {
-    final cubit = context.read<FlashcardCubit>();
-    final state = cubit.state;
+    final state = ref.read(flashcardProvider);
     _dialogShown = true;
 
     QlzModal.showDialog(
@@ -88,7 +81,7 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
         notLearnedCount: state.notLearnedCount,
         totalFlashcards: state.totalFlashcards,
         onRestart: () {
-          cubit.resetStudySession();
+          ref.read(flashcardProvider.notifier).resetStudySession();
           _dialogShown = false;
         },
       ),
@@ -98,14 +91,11 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
   void _toggleAutoPlayMode(BuildContext context) {
     setState(() {
       _isAutoPlayEnabled = !_isAutoPlayEnabled;
-
-      // Khi bật chế độ tự động, đánh dấu biến _isAutoSwiping
       _isAutoSwiping = _isAutoPlayEnabled;
     });
 
     if (_isAutoPlayEnabled) {
-      // Khởi động chuỗi tự động với flashcard hiện tại
-      final state = context.read<FlashcardCubit>().state;
+      final state = ref.read(flashcardProvider);
       _currentFlashcard = state.currentFlashcard;
       _runAutoPlaySequence(context);
     } else {
@@ -116,40 +106,29 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
   void _runAutoPlaySequence(BuildContext context) {
     if (!mounted || !_isAutoPlayEnabled) return;
 
-    final cubit = context.read<FlashcardCubit>();
-    final state = cubit.state;
+    final state = ref.read(flashcardProvider);
 
     if (state.flashcards.isEmpty) {
       _stopAutoPlayMode();
       return;
     }
 
-    // Lấy controller cho flashcard hiện tại
     final flashcardId = state.currentFlashcard?.id ?? '';
     final controller = _getFlashcardController(flashcardId);
 
     if (controller.isShowingFront) {
-      // 1. Nếu đang ở mặt trước, lật thẻ để xem định nghĩa
       controller.flip();
-
-      // 2. Đợi 5 giây để người dùng đọc định nghĩa
       _autoPlayTimer = Timer(const Duration(seconds: 5), () {
         if (!mounted || !_isAutoPlayEnabled) return;
 
-        // 3. Kiểm tra nếu đây là thẻ cuối cùng
         if (state.currentIndex < state.flashcards.length - 1) {
-          // 4. Nếu chưa phải thẻ cuối, chuyển sang thẻ kế tiếp (KHÔNG đánh dấu điểm)
           _cardSwiperController.swipe(CardSwiperDirection.right);
-
-          // 5. Đợi animation chuyển thẻ hoàn tất
           _autoPlayTimer = Timer(const Duration(seconds: 1), () {
             if (mounted && _isAutoPlayEnabled) {
-              // 6. Tiếp tục chuỗi với thẻ mới
               _runAutoPlaySequence(context);
             }
           });
         } else {
-          // Nếu là thẻ cuối cùng
           _stopAutoPlayMode();
           if (!_dialogShown) {
             _showCompletionDialog(context);
@@ -157,19 +136,14 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
         }
       });
     } else {
-      // Nếu đang ở mặt sau, chuyển thẻ luôn (không cần lật về mặt trước)
       if (state.currentIndex < state.flashcards.length - 1) {
-        // Chuyển sang thẻ tiếp theo (KHÔNG đánh dấu điểm)
         _cardSwiperController.swipe(CardSwiperDirection.right);
-
-        // Đợi animation chuyển thẻ hoàn tất
         _autoPlayTimer = Timer(const Duration(seconds: 1), () {
           if (mounted && _isAutoPlayEnabled) {
             _runAutoPlaySequence(context);
           }
         });
       } else {
-        // Nếu là thẻ cuối cùng
         _stopAutoPlayMode();
         if (!_dialogShown) {
           _showCompletionDialog(context);
@@ -187,7 +161,8 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
   }
 
   Future<void> _toggleFlashcardDifficulty(Flashcard flashcard) async {
-    await context.read<FlashcardCubit>().toggleDifficulty(flashcard.id);
+    await ref.read(flashcardProvider.notifier).toggleDifficulty(flashcard.id);
+
     if (mounted) {
       QlzSnackbar.info(
         context: context,
@@ -200,30 +175,32 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<FlashcardCubit, FlashcardState>(
-      listener: (context, state) {
-        if (state.isSessionCompleted &&
-            !state.hasMoreFlashcards &&
-            !_dialogShown) {
-          _showCompletionDialog(context);
-        }
+    final state = ref.watch(flashcardProvider);
 
-        // Cập nhật flashcard hiện tại khi thay đổi
-        _currentFlashcard = state.currentFlashcard;
-      },
-      builder: (context, state) {
-        switch (state.status) {
-          case FlashcardStatus.loading:
-            return _buildLoadingState();
-          case FlashcardStatus.failure:
-            return _buildErrorState(state);
-          case FlashcardStatus.success:
-          case FlashcardStatus.initial:
-            return _buildStudyInterface(context, state);
-        }
-      },
-    );
+    // Listen for state changes to show completion dialog
+    ref.listen<FlashcardState>(flashcardProvider, (previous, current) {
+      if (current.isSessionCompleted &&
+          !current.hasMoreFlashcards &&
+          !_dialogShown) {
+        _showCompletionDialog(context);
+      }
+      _currentFlashcard = current.currentFlashcard;
+    });
+
+    switch (state.status) {
+      case FlashcardStatus.loading:
+        return _buildLoadingState();
+      case FlashcardStatus.failure:
+        return _buildErrorState(state);
+      case FlashcardStatus.success:
+      case FlashcardStatus.initial:
+        return _buildStudyInterface(context, state);
+    }
   }
+
+  // Các phương thức build khác giữ nguyên, chỉ thay đổi context.read<FlashcardCubit>()
+  // thành ref.read(flashcardProvider.notifier)
+  // ...
 
   Widget _buildLoadingState() {
     return const Scaffold(
@@ -248,11 +225,8 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
   }
 
   Widget _buildStudyInterface(BuildContext context, FlashcardState state) {
-    // Tạo danh sách các thẻ để hiển thị trong swiper
     final flashcardWidgets = state.flashcards.map((flashcard) {
-      // Tạo hoặc lấy controller cho flashcard
       final controller = _getFlashcardController(flashcard.id);
-
       return Container(
         margin: const EdgeInsets.all(20),
         child: QlzFlashcard(
@@ -264,7 +238,7 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
           pronunciation: flashcard.pronunciation,
           isDifficult: flashcard.isDifficult,
           onAudioPlay: () {
-            // Implement audio playback logic
+            // Audio functionality
           },
           onMarkAsDifficult: () => _toggleFlashcardDifficulty(flashcard),
         ),
@@ -288,7 +262,6 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
       body: SafeArea(
         child: Column(
           children: [
-            // Counters for learned/not learned terms
             const SizedBox(height: 10),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -308,8 +281,6 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
                 ],
               ),
             ),
-
-            // Flashcard area with CardSwiper
             Expanded(
               child: flashcardWidgets.isEmpty
                   ? const Center(
@@ -326,22 +297,21 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
                       onSwipe: (previousIndex, currentIndex, direction) {
                         if (!_isAutoSwiping) {
                           if (direction == CardSwiperDirection.left) {
-                            // Vuốt trái - đánh dấu đang học (chưa thuộc)
-                            context.read<FlashcardCubit>().markAsNotLearned();
+                            ref
+                                .read(flashcardProvider.notifier)
+                                .markAsNotLearned();
                           } else if (direction == CardSwiperDirection.right) {
-                            // Vuốt phải - đánh dấu đã thuộc
-                            context.read<FlashcardCubit>().markAsLearned();
+                            ref
+                                .read(flashcardProvider.notifier)
+                                .markAsLearned();
                           }
                         }
-
-                        // Cập nhật index hiện tại
                         if (currentIndex != null &&
                             currentIndex != state.currentIndex) {
-                          context
-                              .read<FlashcardCubit>()
+                          ref
+                              .read(flashcardProvider.notifier)
                               .onPageChanged(currentIndex);
                         }
-
                         return true;
                       },
                       onEnd: () {
@@ -354,38 +324,25 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
                       padding: const EdgeInsets.all(0),
                       cardBuilder: (context, index, percentThresholdX,
                           percentThresholdY) {
-                        // Thêm hiệu ứng màu cho thẻ khi vuốt
                         Color overlayColor = Colors.transparent;
                         IconData? overlayIcon;
-
-                        // Đảm bảo opacity nằm trong khoảng [0.0, 1.0]
                         double opacity = 0.0;
-
-                        // Xác định màu overlay dựa vào hướng vuốt
                         if (percentThresholdX.abs() > 0.1) {
-                          // Giới hạn giá trị opacity từ 0.0 đến 1.0
                           opacity =
                               (1.0 - percentThresholdX.abs()).clamp(0.3, 1.0);
-
                           if (percentThresholdX > 0) {
-                            // Vuốt phải - đã thuộc (màu xanh)
                             if (!_isAutoSwiping) {
                               overlayColor = Colors.green;
                               overlayIcon = Icons.check;
                             }
                           } else {
-                            // Vuốt trái - đang học (màu cam)
                             overlayColor = Colors.orange;
                             overlayIcon = Icons.refresh;
                           }
                         }
-
                         return Stack(
                           children: [
-                            // Thẻ gốc
                             flashcardWidgets[index],
-
-                            // Overlay màu khi vuốt
                             Positioned.fill(
                               child: Container(
                                 decoration: BoxDecoration(
@@ -408,8 +365,6 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
                       },
                     ),
             ),
-
-            // Navigation buttons
             Padding(
               padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
               child: Row(
@@ -429,7 +384,6 @@ class _FlashcardStudyModeViewState extends State<FlashcardStudyModeView> {
                     tooltip: 'Quay lại',
                     isDisabled: _isAutoPlayEnabled || state.currentIndex == 0,
                   ),
-                  // Swipe guidance text
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Column(
