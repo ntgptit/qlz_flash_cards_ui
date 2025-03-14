@@ -7,14 +7,14 @@ import 'package:qlz_flash_cards_ui/core/providers/app_providers.dart';
 import 'package:qlz_flash_cards_ui/features/library/logic/cubit/classes_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/library/logic/cubit/folders_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/library/logic/cubit/study_sets_cubit.dart';
-import 'package:qlz_flash_cards_ui/features/library/presentation/screens/create_class_screen.dart';
-import 'package:qlz_flash_cards_ui/features/library/presentation/screens/create_folder_screen.dart';
-import 'package:qlz_flash_cards_ui/features/library/presentation/screens/folder_detail_screen.dart';
+import 'package:qlz_flash_cards_ui/features/library/presentation/screens/class/class_detail_screen.dart';
+import 'package:qlz_flash_cards_ui/features/library/presentation/screens/class/create_class_screen.dart';
+import 'package:qlz_flash_cards_ui/features/library/presentation/screens/folder/create_folder_screen.dart';
+import 'package:qlz_flash_cards_ui/features/library/presentation/screens/folder/folder_detail_screen.dart';
 import 'package:qlz_flash_cards_ui/features/module/module_module.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'data/repositories/library_repository.dart';
-import 'presentation/screens/class_detail_screen.dart';
 import 'presentation/screens/library_screen.dart';
 
 /// Entry point for the Library feature module.

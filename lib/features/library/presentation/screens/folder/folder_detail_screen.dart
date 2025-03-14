@@ -9,10 +9,6 @@ import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_loading_state.dar
 import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/utils/qlz_chip.dart';
 
-import '../../data/models/study_set_model.dart';
-import '../../logic/states/study_sets_state.dart';
-import '../widgets/study_set_item.dart';
-
 /// Màn hình hiển thị chi tiết thư mục và danh sách học phần trong thư mục
 class FolderDetailScreen extends StatefulWidget {
   final String folderId;

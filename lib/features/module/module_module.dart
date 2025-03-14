@@ -4,10 +4,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/core/providers/app_providers.dart';
 import 'package:qlz_flash_cards_ui/features/module/logic/cubit/module_detail_cubit.dart';
-import 'package:qlz_flash_cards_ui/features/module/screens/create_study_module_screen.dart';
-import 'package:qlz_flash_cards_ui/features/module/screens/list_study_module_of_folder_screen.dart';
-import 'package:qlz_flash_cards_ui/features/module/screens/module_detail_screen.dart';
-import 'package:qlz_flash_cards_ui/features/module/screens/module_settings_screen.dart';
+import 'package:qlz_flash_cards_ui/features/module/presentation/screens/create_study_module_screen.dart';
+import 'package:qlz_flash_cards_ui/features/module/presentation/screens/list_study_module_of_folder_screen.dart';
+import 'package:qlz_flash_cards_ui/features/module/presentation/screens/module_detail_screen.dart';
+import 'package:qlz_flash_cards_ui/features/module/presentation/screens/module_settings_screen.dart';
 
 class ModuleModule {
   // Riverpod-based providers (recommended approach)
