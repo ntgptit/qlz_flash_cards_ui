@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
-import 'package:qlz_flash_cards_ui/core/utils/time_formatter.dart';
 import 'package:qlz_flash_cards_ui/features/dashboard/logic/cubit/dashboard_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/dashboard/logic/states/dashboard_state.dart';
 import 'package:qlz_flash_cards_ui/features/dashboard/presentation/widgets/recommended_modules.dart';
 import 'package:qlz_flash_cards_ui/features/dashboard/presentation/widgets/session_history.dart';
+import 'package:qlz_flash_cards_ui/features/dashboard/presentation/widgets/stats_overview.dart';
 import 'package:qlz_flash_cards_ui/features/dashboard/presentation/widgets/streak_card.dart';
 import 'package:qlz_flash_cards_ui/features/dashboard/presentation/widgets/study_chart.dart';
-import 'package:qlz_flash_cards_ui/features/dashboard/presentation/widgets/study_stats_card.dart';
 import 'package:qlz_flash_cards_ui/features/module/data/models/study_module_model.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/buttons/qlz_button.dart';
 
@@ -31,6 +30,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
       body: BlocBuilder<DashboardCubit, DashboardState>(
+        buildWhen: (previous, current) => previous.status != current.status,
         builder: (context, state) {
           if (state.status == DashboardStatus.initial ||
               (state.status == DashboardStatus.loading &&
@@ -41,8 +41,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             );
           }
-          if (state.status == DashboardStatus.failure)
+
+          if (state.status == DashboardStatus.failure) {
             return _buildErrorState(context);
+          }
+
           return RefreshIndicator(
             color: AppColors.primary,
             backgroundColor: AppColors.darkSurface,
@@ -86,59 +89,61 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildDashboardContent(DashboardState state) {
-    if (state.stats == null ||
-        state.filteredHistory == null ||
-        state.recommendedModules == null) {
-      return const Center(
-        child: Text(
-          'Dữ liệu không đầy đủ',
-          style: TextStyle(color: AppColors.error),
-        ),
-      );
-    }
-
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
         _buildSliverAppBar(),
         SliverPadding(
-          padding: const EdgeInsets.all(16), // Chuẩn: 16 ở tất cả các cạnh
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           sliver: SliverList(
-            delegate: SliverChildListDelegate([
-              if (!state.hasStudiedToday) _buildTodayGoalCard(),
-              const SizedBox(height: 16), // Đồng bộ khoảng cách dọc
-              StatsOverview(state: state),
-              const SizedBox(height: 16),
-              StreakCard(
-                currentStreak: state.stats.currentStreak,
-                longestStreak: state.stats.longestStreak,
-                hasStudiedToday: state.hasStudiedToday,
-                onTap: () => _showMotivationSnackBar(context),
-              ),
-              const SizedBox(height: 16),
-              StudyActivityChart(
-                dailyStudyTime: state.filteredHistory.dailyStudyTime,
-                dailyTermsLearned: state.filteredHistory.dailyTermsLearned,
-                timePeriod: state.selectedTimePeriod,
-                onPeriodChanged: (period) =>
-                    context.read<DashboardCubit>().changeTimePeriod(period),
-              ),
-              const SizedBox(height: 16),
-              RecommendedModules(
-                modules: state.recommendedModules,
-                onViewAll: () => _showSnackBar(context, 'Xem tất cả học phần'),
-                onModuleTap: (module) =>
-                    _navigateToModuleDetail(context, module),
-              ),
-              const SizedBox(height: 16),
-              SessionHistory(
-                sessions: state.filteredHistory.sessions,
-                onViewAll: () => _showSnackBar(context, 'Xem toàn bộ lịch sử'),
-                onSessionTap: (session) => _showSnackBar(
-                    context, 'Chi tiết phiên: ${session.moduleName}'),
-              ),
-              const SizedBox(height: 16), // Chuẩn hóa khoảng cách cuối
-            ]),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                switch (index) {
+                  case 0:
+                    return state.hasStudiedToday
+                        ? const SizedBox.shrink()
+                        : _buildTodayGoalCard();
+                  case 1:
+                    return StatsOverview(state: state);
+                  case 2:
+                    return StreakCard(
+                      currentStreak: state.stats.currentStreak,
+                      longestStreak: state.stats.longestStreak,
+                      hasStudiedToday: state.hasStudiedToday,
+                      onTap: () => _showMotivationSnackBar(context),
+                    );
+                  case 3:
+                    return StudyActivityChart(
+                      dailyStudyTime: state.filteredHistory.dailyStudyTime,
+                      dailyTermsLearned:
+                          state.filteredHistory.dailyTermsLearned,
+                      timePeriod: state.selectedTimePeriod,
+                      onPeriodChanged: (period) => context
+                          .read<DashboardCubit>()
+                          .changeTimePeriod(period),
+                    );
+                  case 4:
+                    return RecommendedModules(
+                      modules: state.recommendedModules,
+                      onViewAll: () =>
+                          _showSnackBar(context, 'Xem tất cả học phần'),
+                      onModuleTap: (module) =>
+                          _navigateToModuleDetail(context, module),
+                    );
+                  case 5:
+                    return SessionHistory(
+                      sessions: state.filteredHistory.sessions,
+                      onViewAll: () =>
+                          _showSnackBar(context, 'Xem toàn bộ lịch sử'),
+                      onSessionTap: (session) => _showSnackBar(
+                          context, 'Chi tiết phiên: ${session.moduleName}'),
+                    );
+                  default:
+                    return const SizedBox.shrink();
+                }
+              },
+              childCount: 6,
+            ),
           ),
         ),
       ],
@@ -149,7 +154,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return SliverAppBar(
       elevation: 0,
       backgroundColor: AppColors.darkBackground,
-      expandedHeight: 100, // Giảm từ 120 xuống 100
+      expandedHeight: 100,
       floating: true,
       pinned: true,
       flexibleSpace: FlexibleSpaceBar(
@@ -157,10 +162,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: Text(
           'Tổng quan học tập',
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                // Từ headlineSmall xuống titleLarge
                 color: AppColors.darkText,
                 fontWeight: FontWeight.bold,
-                fontSize: 20, // Chuẩn 20sp
+                fontSize: 20,
               ),
         ),
         background: Container(
@@ -169,7 +173,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                AppColors.primary.withOpacity(0.3), // Tăng từ 0.2 lên 0.3
+                AppColors.primary.withOpacity(0.3),
                 Colors.transparent,
               ],
             ),
@@ -178,8 +182,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.search,
-              color: AppColors.primary, size: 28), // Tăng từ 24 lên 28
+          icon: const Icon(Icons.search, color: AppColors.primary, size: 28),
           onPressed: () => _showSnackBar(context, 'Tìm kiếm đang phát triển'),
         ),
         IconButton(
@@ -204,41 +207,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color:
-                    AppColors.primary.withOpacity(0.3), // Tăng từ 0.2 lên 0.3
+                color: AppColors.primary.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(Icons.calendar_today,
-                  color: AppColors.primary, size: 20), // Giảm từ 24 xuống 20
+                  color: AppColors.primary, size: 20),
             ),
             const SizedBox(width: 16),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Mục tiêu hôm nay',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppColors.darkText,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16, // Chuẩn 16sp
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Học 5 phút để duy trì chuỗi',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.darkTextSecondary,
-                          fontSize: 12, // Chuẩn 12sp
-                        ),
-                  ),
-                ],
+              child: Text(
+                'Học 5 phút để duy trì chuỗi',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.darkTextSecondary,
+                      fontSize: 12,
+                    ),
               ),
             ),
             QlzButton.primary(
-              label: 'Bắt đầu học ngay',
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 8), // Giảm padding
+              label: 'Bắt đầu',
               onPressed: () => _showSnackBar(context, 'Bắt đầu học ngay'),
             ),
           ],
@@ -259,70 +245,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         backgroundColor: AppColors.darkSurface,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16), // Chuẩn: 16 ở tất cả các cạnh
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
 
   void _showMotivationSnackBar(BuildContext context) {
     _showSnackBar(context, 'Học ngay để duy trì chuỗi ngày của bạn!');
-  }
-}
-
-class StatsOverview extends StatelessWidget {
-  final DashboardState state;
-  const StatsOverview({super.key, required this.state});
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: StudyStatsCard(
-                title: 'Tổng thời gian',
-                value: state.stats.formattedStudyTime,
-                subtitle: '${state.stats.totalSessionsCompleted} phiên',
-                icon: Icons.timer_outlined,
-                iconColor: AppColors.warning,
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text(
-                          'Tổng thời gian: ${state.stats.formattedStudyTime}')),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12), // Giảm từ 16 xuống 12
-            Expanded(
-              child: StudyStatsCard(
-                title: 'Từ đã học',
-                value: '${state.stats.totalTermsLearned}',
-                subtitle: '${state.stats.totalDifficultTerms} từ khó',
-                icon: Icons.school_outlined,
-                iconColor: AppColors.success,
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content:
-                          Text('Tổng từ: ${state.stats.totalTermsLearned}')),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12), // Giảm từ 16 xuống 12
-        StudyStatsCard(
-          title: state.periodLabel,
-          value: '${state.periodTotalTermsLearned} từ',
-          subtitle: TimeFormatter.formatDuration(state.periodTotalStudyTime),
-          icon: Icons.insights_outlined,
-          iconColor: AppColors.primary,
-          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(
-                    '${state.periodLabel}: ${state.periodTotalTermsLearned} từ')),
-          ),
-        ),
-      ],
-    );
   }
 }
