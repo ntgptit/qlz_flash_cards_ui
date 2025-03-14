@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
-import 'package:qlz_flash_cards_ui/features/dashboard/dashboard_module.dart';
+import 'package:qlz_flash_cards_ui/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:qlz_flash_cards_ui/features/home/presentation/widgets/solutions_tab.dart';
 import 'package:qlz_flash_cards_ui/features/library/library_module.dart';
 import 'package:qlz_flash_cards_ui/features/profile/profile_screen.dart';
@@ -27,12 +27,12 @@ final class HomeScreen extends ConsumerWidget {
 
   Widget _buildBody(BuildContext context, int tabIndex, WidgetRef ref) {
     return switch (tabIndex) {
-      0 => DashboardModule.create(),
+      0 => const DashboardScreen(),
       1 => const SolutionsTab(),
       2 => const SizedBox.shrink(), // This tab opens a modal instead
       3 => LibraryModule.provideRiverpodScreen(),
       4 => const ProfileScreen(),
-      _ => DashboardModule.create() // Fallback case
+      _ => const DashboardScreen() // Fallback case
     };
   }
 
