@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:qlz_flash_cards_ui/config/app_colors.dart';
+import 'package:qlz_flash_cards_ui/features/library/presentation/providers/folders_provider.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/buttons/qlz_button.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/cards/qlz_card.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_snackbar.dart';

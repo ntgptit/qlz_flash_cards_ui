@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
-import 'package:qlz_flash_cards_ui/features/flashcard/screens/flashcard_study_mode_screen.dart';
+import 'package:qlz_flash_cards_ui/features/flashcard/presentation/screens/flashcard_study_mode_screen.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/buttons/qlz_icon_button.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_empty_state.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/study/qlz_flashcard.dart';
@@ -11,48 +11,48 @@ import 'package:qlz_flash_cards_ui/shared/widgets/study/qlz_flashcard.dart';
 final class QlzFlashcardCarousel extends StatefulWidget {
   /// Danh sách flashcards để hiển thị trong carousel
   final List<Flashcard> flashcards;
-  
+
   /// Chiều cao của carousel
   final double height;
-  
+
   /// Callback khi một trang mới được hiển thị
   final void Function(int)? onPageChanged;
-  
+
   /// Trang ban đầu để hiển thị
   final int initialPage;
-  
+
   /// Callback khi thẻ được lật
   final VoidCallback? onFlip;
-  
+
   /// Callback khi người dùng muốn phát audio
   final void Function(int)? onAudioPlay;
-  
+
   /// Callback khi người dùng đánh dấu một flashcard là khó
   final void Function(int)? onMarkAsDifficult;
-  
+
   /// Callback khi người dùng nhấn vào nút xem toàn màn hình
   final void Function(int)? onFullscreen;
-  
+
   /// Widget hiển thị khi không có flashcard nào
   final Widget? emptyWidget;
-  
+
   /// Tiêu đề hiển thị khi không có flashcard
   final String emptyTitle;
-  
+
   /// Thông báo hiển thị khi không có flashcard
   final String emptyMessage;
-  
+
   /// Nhãn nút hành động khi không có flashcard
   final String? emptyActionLabel;
-  
+
   /// Callback khi nút hành động được nhấn trong trạng thái trống
   final VoidCallback? onEmptyAction;
-  
+
   /// Hiển thị tối đa bao nhiêu chỉ báo trang
   final int maxPageIndicators;
 
   const QlzFlashcardCarousel({
-    super.key, 
+    super.key,
     required this.flashcards,
     this.height = 220,
     this.onPageChanged,
@@ -82,7 +82,7 @@ class _QlzFlashcardCarouselState extends State<QlzFlashcardCarousel> {
     super.initState();
     _currentPage = widget.initialPage;
     _pageController = PageController(
-      viewportFraction: 0.9, 
+      viewportFraction: 0.9,
       initialPage: widget.initialPage,
     );
   }
@@ -106,7 +106,7 @@ class _QlzFlashcardCarouselState extends State<QlzFlashcardCarousel> {
       if (widget.emptyWidget != null) {
         return widget.emptyWidget!;
       }
-      
+
       return QlzEmptyState.noData(
         title: widget.emptyTitle,
         message: widget.emptyMessage,
@@ -182,13 +182,13 @@ class _QlzFlashcardCarouselState extends State<QlzFlashcardCarousel> {
       ],
     );
   }
-  
+
   Widget _buildPageIndicators() {
     final int totalCards = widget.flashcards.length;
-    final int visibleIndicators = totalCards > widget.maxPageIndicators 
-      ? widget.maxPageIndicators 
-      : totalCards;
-    
+    final int visibleIndicators = totalCards > widget.maxPageIndicators
+        ? widget.maxPageIndicators
+        : totalCards;
+
     return Column(
       children: [
         Row(
@@ -198,15 +198,18 @@ class _QlzFlashcardCarouselState extends State<QlzFlashcardCarousel> {
             (index) {
               // Adjust index if we have more cards than visible indicators
               final int adjustedIndex = totalCards > widget.maxPageIndicators
-                  ? (_currentPage < widget.maxPageIndicators / 2 
-                      ? index 
-                      : (_currentPage > totalCards - widget.maxPageIndicators / 2
+                  ? (_currentPage < widget.maxPageIndicators / 2
+                      ? index
+                      : (_currentPage >
+                              totalCards - widget.maxPageIndicators / 2
                           ? (totalCards - widget.maxPageIndicators) + index
-                          : _currentPage - (widget.maxPageIndicators ~/ 2) + index))
+                          : _currentPage -
+                              (widget.maxPageIndicators ~/ 2) +
+                              index))
                   : index;
-                  
+
               final bool isCurrent = adjustedIndex == _currentPage;
-              
+
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
@@ -237,7 +240,7 @@ class _QlzFlashcardCarouselState extends State<QlzFlashcardCarousel> {
       ],
     );
   }
-  
+
   /// Chuyển đến trang cụ thể trong carousel
   void goToPage(int page) {
     if (page >= 0 && page < widget.flashcards.length) {
@@ -248,7 +251,7 @@ class _QlzFlashcardCarouselState extends State<QlzFlashcardCarousel> {
       );
     }
   }
-  
+
   /// Chuyển đến trang kế tiếp
   void nextPage() {
     if (_currentPage < widget.flashcards.length - 1) {
@@ -258,7 +261,7 @@ class _QlzFlashcardCarouselState extends State<QlzFlashcardCarousel> {
       );
     }
   }
-  
+
   /// Chuyển đến trang trước đó
   void previousPage() {
     if (_currentPage > 0) {

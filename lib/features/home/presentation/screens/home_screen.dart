@@ -3,6 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
 import 'package:qlz_flash_cards_ui/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:qlz_flash_cards_ui/features/home/presentation/widgets/app_bar_background.dart';
+import 'package:qlz_flash_cards_ui/features/home/presentation/widgets/app_bar_leading.dart';
+import 'package:qlz_flash_cards_ui/features/home/presentation/widgets/app_bar_title.dart';
+import 'package:qlz_flash_cards_ui/features/home/presentation/widgets/notification_button.dart';
+import 'package:qlz_flash_cards_ui/features/home/presentation/widgets/settings_menu.dart';
 import 'package:qlz_flash_cards_ui/features/home/presentation/widgets/solutions_tab.dart';
 import 'package:qlz_flash_cards_ui/features/library/library_module.dart';
 import 'package:qlz_flash_cards_ui/features/profile/profile_screen.dart';
@@ -19,9 +24,32 @@ final class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(kToolbarHeight),
+        child: _buildAppBar(context, state.selectedTabIndex, ref),
+      ),
       body: _buildBody(context, state.selectedTabIndex, ref),
       bottomNavigationBar:
           _buildNavigationBar(context, state.selectedTabIndex, ref),
+    );
+  }
+
+  Widget _buildAppBar(BuildContext context, int tabIndex, WidgetRef ref) {
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      flexibleSpace: const AppBarBackground(),
+      leading: const AppBarLeading(),
+      title: const AppBarTitle(),
+      centerTitle: true,
+      actions: const [
+        NotificationButton(),
+        SettingsMenu(),
+        SizedBox(width: 8),
+      ],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+      ),
     );
   }
 
