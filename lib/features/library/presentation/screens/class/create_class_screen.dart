@@ -1,29 +1,28 @@
-// lib/features/screens/class/create_class_screen.dart
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
+import 'package:qlz_flash_cards_ui/features/library/presentation/providers/classes_provider.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/buttons/qlz_button.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/cards/qlz_card.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_loading_state.dart';
+import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_snackbar.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/inputs/qlz_text_field.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/labels/qlz_label.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/layout/qlz_screen.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
-import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_loading_state.dart';
-import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_snackbar.dart';
 
-final class CreateClassScreen extends StatefulWidget {
+/// Screen for creating a new class
+class CreateClassScreen extends ConsumerStatefulWidget {
   const CreateClassScreen({super.key});
 
   @override
-  State<CreateClassScreen> createState() => _CreateClassScreenState();
+  ConsumerState<CreateClassScreen> createState() => _CreateClassScreenState();
 }
 
-class _CreateClassScreenState extends State<CreateClassScreen> {
+class _CreateClassScreenState extends ConsumerState<CreateClassScreen> {
   final _classNameController = TextEditingController();
   final _descriptionController = TextEditingController();
   bool _allowMembersToAdd = true;
-  bool _isSubmitting = false;
-  String? _classNameError;
 
   @override
   void dispose() {
@@ -32,69 +31,26 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
     super.dispose();
   }
 
-  bool _validateForm() {
-    final className = _classNameController.text.trim();
-
-    if (className.isEmpty) {
-      setState(() {
-        _classNameError = 'Vui lòng nhập tên lớp học';
-      });
-      return false;
-    } else {
-      setState(() {
-        _classNameError = null;
-      });
-      return true;
-    }
-  }
-
-  Future<void> _createClass() async {
-    if (!_validateForm()) {
-      QlzSnackbar.error(
-        context: context,
-        message: 'Vui lòng nhập tên lớp học',
-      );
-      return;
-    }
-
-    setState(() {
-      _isSubmitting = true;
-    });
-
-    try {
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 1));
-
-      if (!mounted) return;
-
-      // Show success message and pop
-      QlzSnackbar.success(
-        context: context,
-        message: 'Lớp học đã được tạo thành công',
-      );
-
-      // Return to previous screen
-      Navigator.pop(context);
-    } catch (e) {
-      if (mounted) {
-        QlzSnackbar.error(
-          context: context,
-          message: 'Có lỗi xảy ra. Vui lòng thử lại sau.',
-        );
-        setState(() {
-          _isSubmitting = false;
-        });
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(classesProvider);
+
+    // Listen for errors
+    ref.listen(classesProvider, (previous, current) {
+      if (current.errorMessage != null) {
+        QlzSnackbar.error(
+          context: context,
+          message: current.errorMessage!,
+        );
+        ref.read(classesProvider.notifier).clearError();
+      }
+    });
+
     return QlzScreen(
       appBar: QlzAppBar(
         title: 'Lớp học mới',
         actions: [
-          _isSubmitting
+          state.isCreating
               ? const Padding(
                   padding: EdgeInsets.all(8.0),
                   child: SizedBox(
@@ -112,7 +68,7 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
                 ),
         ],
       ),
-      child: _isSubmitting
+      child: state.isCreating
           ? const Center(
               child: QlzLoadingState(
                 message: 'Đang tạo lớp học...',
@@ -144,6 +100,8 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
   }
 
   Widget _buildClassInfoCard() {
+    final state = ref.watch(classesProvider);
+
     return QlzCard(
       padding: const EdgeInsets.all(20),
       margin: const EdgeInsets.only(bottom: 20),
@@ -164,8 +122,12 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
             hintText: 'Nhập tên lớp học',
             isRequired: true,
             prefixIcon: Icons.class_outlined,
-            error: _classNameError,
-            onChanged: (_) => setState(() => _classNameError = null),
+            error: state.validationError,
+            onChanged: (_) {
+              if (state.validationError != null) {
+                ref.read(classesProvider.notifier).clearError();
+              }
+            },
           ),
           const SizedBox(height: 20),
           QlzTextField(
@@ -239,12 +201,36 @@ class _CreateClassScreenState extends State<CreateClassScreen> {
             label: 'Thêm cài đặt nâng cao',
             icon: Icons.settings_outlined,
             onPressed: () {
-              // Implement advanced settings navigation
+              // TODO: Implement advanced settings
             },
             size: QlzButtonSize.small,
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _createClass() async {
+    if (_classNameController.text.trim().isEmpty) {
+      QlzSnackbar.error(
+        context: context,
+        message: 'Vui lòng nhập tên lớp học',
+      );
+      return;
+    }
+
+    final success = await ref.read(classesProvider.notifier).createClass(
+          name: _classNameController.text.trim(),
+          description: _descriptionController.text.trim(),
+          allowMembersToAdd: _allowMembersToAdd,
+        );
+
+    if (success && mounted) {
+      QlzSnackbar.success(
+        context: context,
+        message: 'Lớp học đã được tạo thành công',
+      );
+      Navigator.pop(context);
+    }
   }
 }

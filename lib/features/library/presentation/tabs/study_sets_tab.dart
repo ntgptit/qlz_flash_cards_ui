@@ -1,67 +1,60 @@
-// lib/features/library/presentation/tabs/study_sets_tab.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
-import 'package:qlz_flash_cards_ui/features/library/logic/cubit/study_sets_cubit.dart';
+import 'package:qlz_flash_cards_ui/features/library/data/models/study_set_model.dart';
+import 'package:qlz_flash_cards_ui/features/library/presentation/providers/study_sets_provider.dart';
+import 'package:qlz_flash_cards_ui/features/library/presentation/widgets/filter_dropdown.dart';
+import 'package:qlz_flash_cards_ui/features/library/presentation/widgets/study_set_item.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_empty_state.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_loading_state.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/header/qlz_section_header.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/inputs/qlz_text_field.dart';
 
-import '../../data/models/study_set_model.dart';
-import '../../logic/states/study_sets_state.dart';
-import '../widgets/filter_dropdown.dart';
-import '../widgets/study_set_item.dart';
-
-/// Tab hiển thị danh sách học phần
-class StudySetsTab extends StatelessWidget {
+/// Tab to display study sets in the library screen
+class StudySetsTab extends ConsumerWidget {
   const StudySetsTab({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<StudySetsCubit, StudySetsState>(
-      builder: (context, state) {
-        // Trạng thái loading - chưa có dữ liệu
-        if (state.status == StudySetsStatus.loading &&
-            state.studySets.isEmpty) {
-          return const QlzLoadingState(
-            type: QlzLoadingType.circular,
-            message: 'Đang tải học phần...',
-          );
-        }
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(studySetsProvider);
 
-        // Trạng thái lỗi
-        if (state.status == StudySetsStatus.failure) {
-          return QlzEmptyState.error(
-            title: 'Không thể tải học phần',
-            message: state.errorMessage ?? 'Đã xảy ra lỗi khi tải dữ liệu',
-            onAction: () => context.read<StudySetsCubit>().refreshStudySets(),
-          );
-        }
+    // Loading state
+    if (state.status == StudySetsStatus.loading && state.studySets.isEmpty) {
+      return const QlzLoadingState(
+        type: QlzLoadingType.circular,
+        message: 'Đang tải học phần...',
+      );
+    }
 
-        // Trạng thái trống - không có dữ liệu
-        if (state.studySets.isEmpty) {
-          return QlzEmptyState.noData(
-            title: 'Chưa có học phần',
-            message:
-                'Bạn chưa có học phần nào. Hãy tạo học phần mới để bắt đầu.',
-            actionLabel: 'Tạo học phần',
-            onAction: () =>
-                Navigator.pushNamed(context, AppRoutes.createStudyModule),
-          );
-        }
+    // Error state
+    if (state.status == StudySetsStatus.failure) {
+      return QlzEmptyState.error(
+        title: 'Không thể tải học phần',
+        message: state.errorMessage ?? 'Đã xảy ra lỗi khi tải dữ liệu',
+        onAction: () => ref.read(studySetsProvider.notifier).refreshStudySets(),
+      );
+    }
 
-        // Trạng thái thành công - có dữ liệu
-        return RefreshIndicator(
-          onRefresh: () => context.read<StudySetsCubit>().refreshStudySets(),
-          child: _buildStudySetsList(context, state),
-        );
-      },
+    // Empty state
+    if (state.studySets.isEmpty) {
+      return QlzEmptyState.noData(
+        title: 'Chưa có học phần',
+        message: 'Bạn chưa có học phần nào. Hãy tạo học phần mới để bắt đầu.',
+        actionLabel: 'Tạo học phần',
+        onAction: () =>
+            Navigator.pushNamed(context, AppRoutes.createStudyModule),
+      );
+    }
+
+    // Content state with refresh capability
+    return RefreshIndicator(
+      onRefresh: () => ref.read(studySetsProvider.notifier).refreshStudySets(),
+      child: _buildStudySetsList(context, state, ref),
     );
   }
 
-  /// Xây dựng danh sách học phần
-  Widget _buildStudySetsList(BuildContext context, StudySetsState state) {
+  Widget _buildStudySetsList(
+      BuildContext context, StudySetsState state, WidgetRef ref) {
     final filterOptions = ['Tất cả', 'Của tôi', 'Đã học', 'Đã tải xuống'];
     final selectedFilter = state.filter ?? filterOptions.first;
 
@@ -69,36 +62,36 @@ class StudySetsTab extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
         const SizedBox(height: 16),
-        // Dropdown lọc học phần
+        // Filter dropdown
         FilterDropdown(
           options: filterOptions,
           selectedOption: selectedFilter,
           onSelected: (value) {
-            context.read<StudySetsCubit>().applyFilter(value);
+            ref.read(studySetsProvider.notifier).applyFilter(value);
           },
         ),
         const SizedBox(height: 16),
-        // Trường tìm kiếm
+        // Search field
         QlzTextField.search(
           hintText: 'Tìm kiếm học phần...',
           onChanged: (value) {
-            // Chức năng tìm kiếm sẽ được triển khai sau
+            // TODO: Implement search functionality
           },
         ),
         const SizedBox(height: 16),
-        // Tiêu đề phần
+        // Section header
         const QlzSectionHeader(
           title: 'Gần đây',
         ),
         const SizedBox(height: 8),
-        // Hiển thị loading nếu đang tải lại dữ liệu
+        // Loading indicator for refresh
         if (state.status == StudySetsStatus.loading &&
             state.studySets.isNotEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
             child: Center(child: CircularProgressIndicator()),
           ),
-        // Danh sách học phần
+        // List of study sets
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: state.studySets
@@ -110,13 +103,11 @@ class StudySetsTab extends StatelessWidget {
               )
               .toList(),
         ),
-        // Khoảng trống dưới cùng để đảm bảo UX
         const SizedBox(height: 16),
       ],
     );
   }
 
-  /// Điều hướng đến màn hình chi tiết học phần
   void _navigateToStudySetDetail(BuildContext context, StudySet studySet) {
     AppRoutes.navigateToModuleDetail(
       context,

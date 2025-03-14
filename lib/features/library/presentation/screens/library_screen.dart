@@ -1,21 +1,20 @@
-// lib/features/library/presentation/screens/library_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
+import 'package:qlz_flash_cards_ui/features/library/presentation/tabs/classes_tab.dart';
+import 'package:qlz_flash_cards_ui/features/library/presentation/tabs/folders_tab.dart';
+import 'package:qlz_flash_cards_ui/features/library/presentation/tabs/study_sets_tab.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
 
-import '../tabs/classes_tab.dart';
-import '../tabs/folders_tab.dart';
-import '../tabs/study_sets_tab.dart';
-
-/// Màn hình chính của module Library, hiển thị các tab cho study sets, folders và classes
-class LibraryScreen extends StatefulWidget {
+/// Main screen for the library section, displaying study sets, folders, and classes
+class LibraryScreen extends ConsumerStatefulWidget {
   const LibraryScreen({super.key});
 
   @override
-  State<LibraryScreen> createState() => _LibraryScreenState();
+  ConsumerState<LibraryScreen> createState() => _LibraryScreenState();
 }
 
-class _LibraryScreenState extends State<LibraryScreen>
+class _LibraryScreenState extends ConsumerState<LibraryScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
@@ -23,6 +22,14 @@ class _LibraryScreenState extends State<LibraryScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+
+    // Add listener to handle tab changes
+    _tabController.addListener(() {
+      // This will trigger a rebuild when the tab changes
+      if (_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
   }
 
   @override
@@ -61,6 +68,7 @@ class _LibraryScreenState extends State<LibraryScreen>
             child: TabBarView(
               controller: _tabController,
               children: const [
+                // Use separate tab widgets for better code organization
                 StudySetsTab(),
                 FoldersTab(),
                 ClassesTab(),
@@ -72,9 +80,10 @@ class _LibraryScreenState extends State<LibraryScreen>
     );
   }
 
-  /// Xử lý hành động thêm mới dựa trên tab hiện tại
+  /// Handle the add button press based on the current tab
   void _handleAddAction() {
     final currentTabIndex = _tabController.index;
+
     switch (currentTabIndex) {
       case 0: // Tab Study Sets
         Navigator.pushNamed(context, AppRoutes.createStudyModule);

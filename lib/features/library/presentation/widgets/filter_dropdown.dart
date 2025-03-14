@@ -1,24 +1,23 @@
-// lib/features/library/presentation/widgets/filter_dropdown.dart
 import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/inputs/qlz_dropdown.dart';
 
-/// Widget dropdown để lọc dữ liệu
+/// A dropdown widget for filtering content
 class FilterDropdown extends StatelessWidget {
-  /// Danh sách các tùy chọn lọc
+  /// The available filter options
   final List<String> options;
 
-  /// Tùy chọn được chọn hiện tại
+  /// The currently selected option
   final String selectedOption;
 
-  /// Callback khi một tùy chọn được chọn
+  /// Callback when an option is selected
   final ValueChanged<String> onSelected;
 
   const FilterDropdown({
+    super.key,
     required this.options,
     required this.selectedOption,
     required this.onSelected,
-    super.key,
   });
 
   @override

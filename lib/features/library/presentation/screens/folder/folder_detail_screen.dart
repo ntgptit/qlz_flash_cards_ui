@@ -1,19 +1,17 @@
-// lib/features/library/presentation/screens/folder_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
 import 'package:qlz_flash_cards_ui/features/library/data/models/study_set_model.dart';
-import 'package:qlz_flash_cards_ui/features/library/logic/cubit/study_sets_cubit.dart';
-import 'package:qlz_flash_cards_ui/features/library/logic/states/study_sets_state.dart';
+import 'package:qlz_flash_cards_ui/features/library/presentation/providers/study_sets_provider.dart';
 import 'package:qlz_flash_cards_ui/features/library/presentation/widgets/study_set_item.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_empty_state.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/feedback/qlz_loading_state.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/navigation/qlz_app_bar.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/utils/qlz_chip.dart';
 
-/// Màn hình hiển thị chi tiết thư mục và danh sách học phần trong thư mục
-class FolderDetailScreen extends StatefulWidget {
+/// Screen for displaying the contents of a folder
+class FolderDetailScreen extends ConsumerStatefulWidget {
   final String folderId;
   final String folderName;
 
@@ -24,35 +22,32 @@ class FolderDetailScreen extends StatefulWidget {
   });
 
   @override
-  State<FolderDetailScreen> createState() => _FolderDetailScreenState();
+  ConsumerState<FolderDetailScreen> createState() => _FolderDetailScreenState();
 }
 
-class _FolderDetailScreenState extends State<FolderDetailScreen> {
+class _FolderDetailScreenState extends ConsumerState<FolderDetailScreen> {
   bool _loadingTimedOut = false;
 
   @override
   void initState() {
     super.initState();
 
-    // Tải dữ liệu khi màn hình được tạo
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      print("DEBUG: Loading study sets for folder ID: ${widget.folderId}");
-      context.read<StudySetsCubit>().loadStudySetsByFolder(widget.folderId);
-
-      // Thêm timeout để tránh trạng thái loading vô hạn
-      Future.delayed(const Duration(seconds: 15), () {
-        if (mounted && !_loadingTimedOut) {
-          print("DEBUG: Loading timed out for folder screen");
-          setState(() {
-            _loadingTimedOut = true;
-          });
-        }
-      });
+    // Set loading timeout
+    Future.delayed(const Duration(seconds: 15), () {
+      if (mounted) {
+        setState(() {
+          _loadingTimedOut = true;
+        });
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    // Create a specific provider instance for this folder
+    final provider = folderStudySetsProvider(widget.folderId);
+    final state = ref.watch(provider);
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A092D),
       appBar: QlzAppBar(
@@ -72,101 +67,7 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
           ),
         ],
       ),
-      body: BlocConsumer<StudySetsCubit, StudySetsState>(
-        listener: (context, state) {
-          print("DEBUG-Listener: State changed to ${state.status}");
-        },
-        builder: (context, state) {
-          print(
-              "DEBUG-Builder: Current state: ${state.status}, studySets: ${state.studySets.length}");
-
-          // Thêm xử lý timeout
-          if (_loadingTimedOut && state.status == StudySetsStatus.loading) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline,
-                      color: Colors.amber, size: 48),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Tải dữ liệu quá lâu',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Có thể có vấn đề với kết nối mạng hoặc máy chủ',
-                    style: TextStyle(color: Colors.white70),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _loadingTimedOut = false;
-                      });
-                      context.read<StudySetsCubit>().loadStudySetsByFolder(
-                          widget.folderId,
-                          forceRefresh: true);
-                    },
-                    child: const Text('Thử lại'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          // Trạng thái loading - chưa có dữ liệu
-          if (state.status == StudySetsStatus.loading &&
-              state.studySets.isEmpty) {
-            return const Center(
-              child: QlzLoadingState(
-                message: 'Đang tải học phần...',
-                type: QlzLoadingType.circular,
-              ),
-            );
-          }
-
-          // Trạng thái lỗi
-          if (state.status == StudySetsStatus.failure) {
-            return QlzEmptyState.error(
-              title: 'Không thể tải học phần',
-              message: state.errorMessage ?? 'Đã xảy ra lỗi khi tải dữ liệu',
-              onAction: () => context
-                  .read<StudySetsCubit>()
-                  .loadStudySetsByFolder(widget.folderId, forceRefresh: true),
-            );
-          }
-
-          // Trạng thái trống - không có dữ liệu
-          if (state.studySets.isEmpty) {
-            return QlzEmptyState.noData(
-              title: 'Chưa có học phần',
-              message: 'Thư mục này chưa có học phần nào',
-              actionLabel: 'Tạo học phần',
-              onAction: () {
-                HapticFeedback.mediumImpact();
-                Navigator.pushNamed(
-                  context,
-                  '/create-study-module',
-                );
-              },
-            );
-          }
-
-          // Trạng thái thành công - có dữ liệu
-          return RefreshIndicator(
-            onRefresh: () => context
-                .read<StudySetsCubit>()
-                .loadStudySetsByFolder(widget.folderId, forceRefresh: true),
-            child: _buildStudySetsList(context, state),
-          );
-        },
-      ),
+      body: _buildBody(context, state, provider),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           HapticFeedback.mediumImpact();
@@ -181,7 +82,99 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
     );
   }
 
-  /// Xây dựng danh sách học phần trong thư mục
+  Widget _buildBody(
+      BuildContext context,
+      StudySetsState state,
+      AutoDisposeStateNotifierProvider<StudySetsNotifier, StudySetsState>
+          provider) {
+    // Handle loading timeout
+    if (_loadingTimedOut && state.status == StudySetsStatus.loading) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.amber, size: 48),
+            const SizedBox(height: 16),
+            const Text(
+              'Tải dữ liệu quá lâu',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Có thể có vấn đề với kết nối mạng hoặc máy chủ',
+              style: TextStyle(color: Colors.white70),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _loadingTimedOut = false;
+                });
+                ref.read(provider.notifier).loadStudySetsByFolder(
+                      widget.folderId,
+                      forceRefresh: true,
+                    );
+              },
+              child: const Text('Thử lại'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Handle loading state
+    if (state.status == StudySetsStatus.loading && state.studySets.isEmpty) {
+      return const Center(
+        child: QlzLoadingState(
+          message: 'Đang tải học phần...',
+          type: QlzLoadingType.circular,
+        ),
+      );
+    }
+
+    // Handle error state
+    if (state.status == StudySetsStatus.failure) {
+      return QlzEmptyState.error(
+        title: 'Không thể tải học phần',
+        message: state.errorMessage ?? 'Đã xảy ra lỗi khi tải dữ liệu',
+        onAction: () => ref.read(provider.notifier).loadStudySetsByFolder(
+              widget.folderId,
+              forceRefresh: true,
+            ),
+      );
+    }
+
+    // Handle empty state
+    if (state.studySets.isEmpty) {
+      return QlzEmptyState.noData(
+        title: 'Chưa có học phần',
+        message: 'Thư mục này chưa có học phần nào',
+        actionLabel: 'Tạo học phần',
+        onAction: () {
+          HapticFeedback.mediumImpact();
+          Navigator.pushNamed(
+            context,
+            '/create-study-module',
+          );
+        },
+      );
+    }
+
+    // Show list with refresh capability
+    return RefreshIndicator(
+      onRefresh: () => ref.read(provider.notifier).loadStudySetsByFolder(
+            widget.folderId,
+            forceRefresh: true,
+          ),
+      child: _buildStudySetsList(context, state),
+    );
+  }
+
   Widget _buildStudySetsList(BuildContext context, StudySetsState state) {
     return SafeArea(
       child: Padding(
@@ -206,6 +199,7 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
                   type: QlzChipType.ghost,
                   onTap: () {
                     HapticFeedback.lightImpact();
+                    // TODO: Implement sorting
                   },
                 ),
               ],
@@ -223,7 +217,6 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
     );
   }
 
-  /// Xây dựng ListView cho danh sách học phần
   Widget _buildStudySetsListView(
       BuildContext context, List<StudySet> studySets) {
     return ListView.builder(
@@ -238,7 +231,6 @@ class _FolderDetailScreenState extends State<FolderDetailScreen> {
     );
   }
 
-  /// Điều hướng đến màn hình chi tiết học phần
   void _navigateToStudySetDetail(BuildContext context, StudySet studySet) {
     HapticFeedback.selectionClick();
     AppRoutes.navigateToModuleDetail(

@@ -1,35 +1,24 @@
-// lib/features/library/data/repositories/library_repository.dart
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:qlz_flash_cards_ui/features/library/data/models/class_model.dart';
+import 'package:qlz_flash_cards_ui/features/library/data/models/folder_model.dart';
+import 'package:qlz_flash_cards_ui/features/library/data/models/study_set_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../models/class_model.dart';
-import '../models/folder_model.dart';
-import '../models/study_set_model.dart';
-
-/// Repository chịu trách nhiệm xử lý các thao tác dữ liệu của Library
 class LibraryRepository {
   final Dio _dio;
   final SharedPreferences _prefs;
-
-  // Cache keys
   static const String _studySetsKey = 'library_study_sets';
   static const String _folderStudySetsPrefix = 'library_folder_study_sets_';
   static const String _foldersKey = 'library_folders';
   static const String _classesKey = 'library_classes';
   static const String _lastSyncKey = 'library_last_sync';
-
-  // Flag cho chế độ phát triển
   final bool _useMockData = true;
 
   LibraryRepository(this._dio, this._prefs);
 
-  // --------- STUDY SETS API ---------
-
-  /// Lấy tất cả học phần
   Future<List<StudySet>> getStudySets(
       {String? filter, bool forceRefresh = false}) async {
     if (_useMockData) {
@@ -38,7 +27,6 @@ class LibraryRepository {
     }
 
     try {
-      // Kiểm tra cache nếu không yêu cầu làm mới
       if (!forceRefresh && _isCacheValid()) {
         final cachedData = _prefs.getString(_studySetsKey);
         if (cachedData != null) {
@@ -52,7 +40,6 @@ class LibraryRepository {
         }
       }
 
-      // Gọi API
       final response = await _dio.get('/api/study-sets', queryParameters: {
         if (filter != null) 'filter': filter,
       });
@@ -61,7 +48,6 @@ class LibraryRepository {
         final List<dynamic> data = response.data['data'];
         final studySets = data.map((json) => StudySet.fromJson(json)).toList();
 
-        // Lưu vào cache
         try {
           await _prefs.setString(_studySetsKey,
               jsonEncode(studySets.map((e) => e.toJson()).toList()));
@@ -77,8 +63,6 @@ class LibraryRepository {
       }
     } catch (e) {
       debugPrint('Error fetching study sets: $e');
-
-      // Sử dụng cache nếu có lỗi mạng
       final cachedData = _prefs.getString(_studySetsKey);
       if (cachedData != null) {
         try {
@@ -88,12 +72,10 @@ class LibraryRepository {
           debugPrint('Error using cached data: $e');
         }
       }
-
       rethrow;
     }
   }
 
-  /// Lấy học phần theo thư mục
   Future<List<StudySet>> getStudySetsByFolder(String folderId,
       {bool forceRefresh = false}) async {
     if (_useMockData) {
@@ -102,7 +84,6 @@ class LibraryRepository {
     }
 
     try {
-      // Kiểm tra cache nếu không yêu cầu làm mới
       final cacheKey = '$_folderStudySetsPrefix$folderId';
       if (!forceRefresh && _isCacheValid()) {
         final cachedData = _prefs.getString(cacheKey);
@@ -117,14 +98,12 @@ class LibraryRepository {
         }
       }
 
-      // Gọi API
       final response = await _dio.get('/api/folders/$folderId/study-sets');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data['data'];
         final studySets = data.map((json) => StudySet.fromJson(json)).toList();
 
-        // Lưu vào cache
         try {
           await _prefs.setString(
               cacheKey, jsonEncode(studySets.map((e) => e.toJson()).toList()));
@@ -141,8 +120,6 @@ class LibraryRepository {
       }
     } catch (e) {
       debugPrint('Error fetching folder study sets: $e');
-
-      // Sử dụng cache nếu có lỗi mạng
       final cacheKey = '$_folderStudySetsPrefix$folderId';
       final cachedData = _prefs.getString(cacheKey);
       if (cachedData != null) {
@@ -153,14 +130,10 @@ class LibraryRepository {
           debugPrint('Error using cached data: $e');
         }
       }
-
       rethrow;
     }
   }
 
-  // --------- FOLDERS API ---------
-
-  /// Lấy tất cả thư mục
   Future<List<Folder>> getFolders({bool forceRefresh = false}) async {
     if (_useMockData) {
       await Future.delayed(const Duration(milliseconds: 800));
@@ -168,7 +141,6 @@ class LibraryRepository {
     }
 
     try {
-      // Kiểm tra cache nếu không yêu cầu làm mới
       if (!forceRefresh && _isCacheValid()) {
         final cachedData = _prefs.getString(_foldersKey);
         if (cachedData != null) {
@@ -182,14 +154,12 @@ class LibraryRepository {
         }
       }
 
-      // Gọi API
       final response = await _dio.get('/api/folders');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data['data'];
         final folders = data.map((json) => Folder.fromJson(json)).toList();
 
-        // Lưu vào cache
         try {
           await _prefs.setString(
               _foldersKey, jsonEncode(folders.map((e) => e.toJson()).toList()));
@@ -205,8 +175,6 @@ class LibraryRepository {
       }
     } catch (e) {
       debugPrint('Error fetching folders: $e');
-
-      // Sử dụng cache nếu có lỗi mạng
       final cachedData = _prefs.getString(_foldersKey);
       if (cachedData != null) {
         try {
@@ -216,25 +184,18 @@ class LibraryRepository {
           debugPrint('Error using cached data: $e');
         }
       }
-
       rethrow;
     }
   }
 
-  /// Tạo thư mục mới
   Future<Folder> createFolder({
     required String name,
     String? description,
   }) async {
     if (_useMockData) {
-      // Giả lập độ trễ API
       await Future.delayed(const Duration(seconds: 1));
-
-      // Tạo ID ngẫu nhiên và thời gian hiện tại
       final String newId = DateTime.now().millisecondsSinceEpoch.toString();
       final DateTime createdAt = DateTime.now();
-
-      // Tạo đối tượng Folder mới
       final newFolder = Folder(
         id: newId,
         name: name,
@@ -243,12 +204,10 @@ class LibraryRepository {
         moduleCount: 0, // Thư mục mới chưa có học phần
         createdAt: createdAt,
       );
-
       return newFolder;
     }
 
     try {
-      // Gọi API tạo thư mục (trong môi trường thực tế)
       final response = await _dio.post('/api/folders', data: {
         'name': name,
         'description': description,
@@ -266,9 +225,6 @@ class LibraryRepository {
     }
   }
 
-  // --------- CLASSES API ---------
-
-  /// Lấy tất cả lớp học
   Future<List<ClassModel>> getClasses({bool forceRefresh = false}) async {
     if (_useMockData) {
       await Future.delayed(const Duration(milliseconds: 800));
@@ -276,7 +232,6 @@ class LibraryRepository {
     }
 
     try {
-      // Kiểm tra cache nếu không yêu cầu làm mới
       if (!forceRefresh && _isCacheValid()) {
         final cachedData = _prefs.getString(_classesKey);
         if (cachedData != null) {
@@ -290,14 +245,12 @@ class LibraryRepository {
         }
       }
 
-      // Gọi API
       final response = await _dio.get('/api/classes');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data['data'];
         final classes = data.map((json) => ClassModel.fromJson(json)).toList();
 
-        // Lưu vào cache
         try {
           await _prefs.setString(
               _classesKey, jsonEncode(classes.map((e) => e.toJson()).toList()));
@@ -313,8 +266,6 @@ class LibraryRepository {
       }
     } catch (e) {
       debugPrint('Error fetching classes: $e');
-
-      // Sử dụng cache nếu có lỗi mạng
       final cachedData = _prefs.getString(_classesKey);
       if (cachedData != null) {
         try {
@@ -324,26 +275,19 @@ class LibraryRepository {
           debugPrint('Error using cached data: $e');
         }
       }
-
       rethrow;
     }
   }
 
-  /// Tạo lớp học mới
   Future<ClassModel> createClass({
     required String name,
     required String description,
     required bool allowMembersToAdd,
   }) async {
     if (_useMockData) {
-      // Giả lập độ trễ API
       await Future.delayed(const Duration(seconds: 1));
-
-      // Tạo ID ngẫu nhiên và thời gian hiện tại
       final String newId = DateTime.now().millisecondsSinceEpoch.toString();
       final DateTime createdAt = DateTime.now();
-
-      // Tạo đối tượng ClassModel mới
       final newClass = ClassModel(
         id: newId,
         name: name,
@@ -351,12 +295,10 @@ class LibraryRepository {
         creatorName: 'giapnguyen1994', // Giả lập người tạo
         createdAt: createdAt,
       );
-
       return newClass;
     }
 
     try {
-      // Gọi API tạo lớp học (trong môi trường thực tế)
       final response = await _dio.post('/api/classes', data: {
         'name': name,
         'description': description,
@@ -375,9 +317,6 @@ class LibraryRepository {
     }
   }
 
-  // --------- HELPER METHODS ---------
-
-  /// Kiểm tra cache còn hiệu lực (dưới 1 giờ)
   bool _isCacheValid() {
     final lastSyncStr = _prefs.getString(_lastSyncKey);
     if (lastSyncStr == null) return false;
@@ -386,8 +325,6 @@ class LibraryRepository {
       final lastSync = DateTime.parse(lastSyncStr);
       final now = DateTime.now();
       final difference = now.difference(lastSync);
-
-      // Cache hợp lệ nếu dưới 1 giờ
       return difference.inHours < 1;
     } catch (e) {
       debugPrint('Error parsing last sync date: $e');
@@ -395,9 +332,6 @@ class LibraryRepository {
     }
   }
 
-  // --------- MOCK DATA METHODS ---------
-
-  /// Tạo dữ liệu giả cho học phần
   List<StudySet> _getMockStudySets() {
     return [
       StudySet(
@@ -448,7 +382,6 @@ class LibraryRepository {
     ];
   }
 
-  /// Tạo dữ liệu giả cho học phần theo thư mục
   List<StudySet> _getMockStudySetsByFolder(String folderId) {
     return List.generate(
       4,
@@ -464,7 +397,6 @@ class LibraryRepository {
     );
   }
 
-  /// Tạo dữ liệu giả cho thư mục
   List<Folder> _getMockFolders() {
     return [
       Folder(
@@ -510,7 +442,6 @@ class LibraryRepository {
     ];
   }
 
-  /// Tạo dữ liệu giả cho lớp học
   List<ClassModel> _getMockClasses() {
     return [
       ClassModel(
