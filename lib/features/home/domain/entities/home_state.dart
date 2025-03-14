@@ -1,14 +1,11 @@
 import 'package:equatable/equatable.dart';
 
-/// State for the home screen
+// Vẫn có thể giữ Equatable để so sánh state nếu muốn
 class HomeState extends Equatable {
-  /// The index of the currently selected tab
   final int selectedTabIndex;
 
-  /// Default constructor with selectedTabIndex defaulting to 0 (home tab)
   const HomeState({this.selectedTabIndex = 0});
 
-  /// Creates a copy of the current state with specified properties replaced
   HomeState copyWith({int? selectedTabIndex}) {
     return HomeState(
       selectedTabIndex: selectedTabIndex ?? this.selectedTabIndex,

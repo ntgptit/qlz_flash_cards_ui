@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
-import 'package:qlz_flash_cards_ui/features/dashboard/logic/states/dashboard_state.dart';
+import 'package:qlz_flash_cards_ui/features/dashboard/domain/states/dashboard_state.dart';
 import 'package:qlz_flash_cards_ui/features/dashboard/presentation/widgets/study_stats_card.dart';
 
 class StatsOverview extends StatelessWidget {

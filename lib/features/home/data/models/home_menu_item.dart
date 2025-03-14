@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Model representing a menu item in the home screen
 class HomeMenuItem {
   final IconData icon;
   final String title;

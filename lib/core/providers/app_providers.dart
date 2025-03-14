@@ -4,11 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Repository imports
 import 'package:qlz_flash_cards_ui/features/auth/data/repositories/auth_repository.dart';
-// Cubit imports
-import 'package:qlz_flash_cards_ui/features/auth/logic/cubit/auth_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/data/repositories/flashcard_repository.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/logic/cubit/flashcard_cubit.dart';
-import 'package:qlz_flash_cards_ui/features/home/logic/cubit/home_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/library/data/repositories/library_repository.dart';
 import 'package:qlz_flash_cards_ui/features/library/logic/cubit/classes_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/library/logic/cubit/folders_cubit.dart';
@@ -89,26 +86,26 @@ final flashcardRepositoryProvider = Provider<FlashcardRepository>((ref) {
 //-------------------------------------------------------------------------
 
 /// Global HomeCubit provider
-final homeCubitProvider = Provider<HomeCubit>((ref) {
-  return HomeCubit();
-});
+// final homeCubitProvider = Provider<HomeCubit>((ref) {
+//   return HomeCubit();
+// });
 
 //-------------------------------------------------------------------------
 // AUTH CUBIT PROVIDERS
 //-------------------------------------------------------------------------
 
 /// AuthCubit provider
-final authCubitProvider = Provider.autoDispose<AuthCubit>((ref) {
-  final repository = ref.watch(authRepositoryProvider);
-  final cubit = AuthCubit(repository);
+// final authCubitProvider = Provider.autoDispose<AuthCubit>((ref) {
+//   final repository = ref.watch(authRepositoryProvider);
+//   final cubit = AuthCubit(repository);
 
-  // Dispose khi không còn cần thiết
-  ref.onDispose(() {
-    cubit.close();
-  });
+//   // Dispose khi không còn cần thiết
+//   ref.onDispose(() {
+//     cubit.close();
+//   });
 
-  return cubit;
-});
+//   return cubit;
+// });
 
 //-------------------------------------------------------------------------
 // LIBRARY CUBIT PROVIDERS

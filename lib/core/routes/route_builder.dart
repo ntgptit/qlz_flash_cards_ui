@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:qlz_flash_cards_ui/core/providers/app_providers.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/flashcard_module.dart';
 import 'package:qlz_flash_cards_ui/features/library/library_module.dart';
@@ -9,9 +7,9 @@ import 'package:qlz_flash_cards_ui/features/module/module_module.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_settings.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/quiz_module.dart';
 
-import '../../features/auth/screens/forgot_password_screen.dart';
-import '../../features/auth/screens/login_screen.dart';
-import '../../features/auth/screens/register_screen.dart';
+import '../../features/auth/presentation/screens/forgot_password_screen.dart';
+import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/study/screens/study_settings_screen.dart';
@@ -25,35 +23,11 @@ class RouteBuilder {
     AppRoutes.welcome: (_) => const WelcomeScreen(),
 
     // Auth routes with Riverpod
-    AppRoutes.login: (_) => Consumer(
-          builder: (context, ref, _) {
-            final authCubit = ref.watch(authCubitProvider);
-            return BlocProvider.value(
-              value: authCubit,
-              child: const LoginScreen(),
-            );
-          },
-        ),
+    AppRoutes.login: (_) => const LoginScreen(),
 
-    AppRoutes.register: (_) => Consumer(
-          builder: (context, ref, _) {
-            final authCubit = ref.watch(authCubitProvider);
-            return BlocProvider.value(
-              value: authCubit,
-              child: const RegisterScreen(),
-            );
-          },
-        ),
+    AppRoutes.register: (_) => const RegisterScreen(),
 
-    AppRoutes.forgotPassword: (_) => Consumer(
-          builder: (context, ref, _) {
-            final authCubit = ref.watch(authCubitProvider);
-            return BlocProvider.value(
-              value: authCubit,
-              child: const ForgotPasswordScreen(),
-            );
-          },
-        ),
+    AppRoutes.forgotPassword: (_) => const ForgotPasswordScreen(),
 
     // Main routes
     AppRoutes.home: (_) => const HomeScreen(),

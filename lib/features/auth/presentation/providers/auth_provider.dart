@@ -1,18 +1,23 @@
-// lib/features/auth/logic/cubit/auth_cubit.dart
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:qlz_flash_cards_ui/core/providers/app_providers.dart';
 import 'package:qlz_flash_cards_ui/core/utils/validation_utils.dart';
 import 'package:qlz_flash_cards_ui/features/auth/data/repositories/auth_repository.dart';
-import 'package:qlz_flash_cards_ui/features/auth/logic/states/auth_state.dart';
+import 'package:qlz_flash_cards_ui/features/auth/domain/states/auth_state.dart';
 
-class AuthCubit extends Cubit<AuthState> {
+// Định nghĩa Provider cho AuthRepository
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  final dio = ref.watch(dioProvider);
+  return AuthRepository(dio);
+});
+
+// StateNotifier thay thế cho AuthCubit
+class AuthStateNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repository;
 
-  AuthCubit(this._repository) : super(const AuthInitial());
+  AuthStateNotifier(this._repository) : super(const AuthInitial());
 
   Future<void> login(String email, String password) async {
-    emit(const AuthLoading());
-
-    // Validate form
+    state = const AuthLoading();
     final Map<String, String?> errors = {};
 
     final emailError = ValidationUtils.validateEmail(email);
@@ -26,24 +31,22 @@ class AuthCubit extends Cubit<AuthState> {
     }
 
     if (errors.isNotEmpty) {
-      emit(AuthError(errors));
+      state = AuthError(errors);
       return;
     }
 
     try {
       await _repository.login(email, password);
-      emit(const AuthSuccess());
+      state = const AuthSuccess();
     } catch (e) {
       errors['general'] = e.toString();
-      emit(AuthError(errors));
+      state = AuthError(errors);
     }
   }
 
   Future<void> register(String displayName, String email, String password,
       String confirmPassword) async {
-    emit(const AuthLoading());
-
-    // Validate form
+    state = const AuthLoading();
     final Map<String, String?> errors = {};
 
     final displayNameError = ValidationUtils.validateDisplayName(displayName);
@@ -68,42 +71,47 @@ class AuthCubit extends Cubit<AuthState> {
     }
 
     if (errors.isNotEmpty) {
-      emit(AuthError(errors));
+      state = AuthError(errors);
       return;
     }
 
     try {
       await _repository.register(displayName, email, password);
-      emit(const AuthSuccess());
+      state = const AuthSuccess();
     } catch (e) {
       errors['general'] = e.toString();
-      emit(AuthError(errors));
+      state = AuthError(errors);
     }
   }
 
   Future<void> forgotPassword(String email) async {
-    emit(const AuthLoading());
-
-    // Validate form
+    state = const AuthLoading();
     final Map<String, String?> errors = {};
 
     final emailError = ValidationUtils.validateEmail(email);
     if (emailError != null) {
       errors['email'] = emailError;
-      emit(AuthError(errors));
+      state = AuthError(errors);
       return;
     }
 
     try {
       await _repository.forgotPassword(email);
-      emit(const AuthSuccess());
+      state = const AuthSuccess();
     } catch (e) {
       errors['general'] = e.toString();
-      emit(AuthError(errors));
+      state = AuthError(errors);
     }
   }
 
   void reset() {
-    emit(const AuthInitial());
+    state = const AuthInitial();
   }
 }
+
+// Provider chính cho quản lý state auth
+final authStateProvider =
+    StateNotifierProvider<AuthStateNotifier, AuthState>((ref) {
+  final repository = ref.watch(authRepositoryProvider);
+  return AuthStateNotifier(repository);
+});

@@ -1,75 +1,44 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
-import 'package:qlz_flash_cards_ui/core/providers/app_providers.dart';
 import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
 import 'package:qlz_flash_cards_ui/features/dashboard/dashboard_module.dart';
-import 'package:qlz_flash_cards_ui/features/home/data/models/home_menu_item.dart';
-import 'package:qlz_flash_cards_ui/features/home/logic/cubit/home_cubit.dart';
-import 'package:qlz_flash_cards_ui/features/home/logic/states/home_state.dart';
+import 'package:qlz_flash_cards_ui/features/home/presentation/widgets/solutions_tab.dart';
 import 'package:qlz_flash_cards_ui/features/library/library_module.dart';
 import 'package:qlz_flash_cards_ui/features/profile/profile_screen.dart';
-import 'package:qlz_flash_cards_ui/shared/widgets/labels/qlz_label.dart';
 
-/// Main home screen with bottom navigation
-final class HomeScreen extends StatelessWidget {
+import '../../data/models/home_menu_item.dart';
+import '../providers/home_providers.dart';
+
+final class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Sử dụng Consumer của Riverpod để lấy HomeCubit
-    return Consumer(
-      builder: (context, ref, _) {
-        final homeCubit = ref.watch(homeCubitProvider);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(homeStateProvider);
 
-        // Cung cấp HomeCubit qua BlocProvider để các widget con có thể truy cập
-        return BlocProvider.value(
-          value: homeCubit,
-          child: const _HomeScreenContent(),
-        );
-      },
-    );
-  }
-}
-
-/// The main content of the home screen that uses the HomeCubit
-class _HomeScreenContent extends StatelessWidget {
-  const _HomeScreenContent();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<HomeCubit, HomeState>(
-      builder: (context, state) {
-        return Scaffold(
-          backgroundColor: AppColors.darkBackground,
-          body: _buildBody(context, state.selectedTabIndex),
-          bottomNavigationBar:
-              _buildNavigationBar(context, state.selectedTabIndex),
-        );
-      },
+    return Scaffold(
+      backgroundColor: AppColors.darkBackground,
+      body: _buildBody(context, state.selectedTabIndex, ref),
+      bottomNavigationBar:
+          _buildNavigationBar(context, state.selectedTabIndex, ref),
     );
   }
 
-  Widget _buildBody(BuildContext context, int tabIndex) {
-    // Lấy WidgetRef từ Consumer bên ngoài khi cần
-    return Consumer(
-      builder: (context, ref, _) {
-        // Return appropriate screen based on the selected tab
-        return switch (tabIndex) {
-          0 => DashboardModule.create(),
-          1 => const SolutionsTab(),
-          2 => const SizedBox.shrink(), // This tab opens a modal instead
-          3 => LibraryModule.provideRiverpodScreen(),
-          4 => const ProfileScreen(),
-          _ => DashboardModule.create() // Fallback case
-        };
-      },
-    );
+  Widget _buildBody(BuildContext context, int tabIndex, WidgetRef ref) {
+    return switch (tabIndex) {
+      0 => DashboardModule.create(),
+      1 => const SolutionsTab(),
+      2 => const SizedBox.shrink(), // This tab opens a modal instead
+      3 => LibraryModule.provideRiverpodScreen(),
+      4 => const ProfileScreen(),
+      _ => DashboardModule.create() // Fallback case
+    };
   }
 
-  Widget _buildNavigationBar(BuildContext context, int currentIndex) {
-    final homeCubit = context.read<HomeCubit>();
+  Widget _buildNavigationBar(
+      BuildContext context, int currentIndex, WidgetRef ref) {
+    final homeNotifier = ref.read(homeStateProvider.notifier);
 
     return NavigationBar(
       backgroundColor: AppColors.darkSurface,
@@ -78,7 +47,7 @@ class _HomeScreenContent extends StatelessWidget {
         if (index == 2) {
           _showCreateModal(context);
         } else {
-          homeCubit.changeTab(index);
+          homeNotifier.changeTab(index);
         }
       },
       indicatorColor: AppColors.primary.withOpacity(0.2),
@@ -127,7 +96,6 @@ class _HomeScreenContent extends StatelessWidget {
   }
 }
 
-/// Modal sheet showing create options
 class _CreateOptionsModal extends StatelessWidget {
   const _CreateOptionsModal();
 
@@ -172,7 +140,6 @@ class _CreateOptionsModal extends StatelessWidget {
   }
 }
 
-/// Individual option item in the create modal
 class _CreateOptionItem extends StatelessWidget {
   final HomeMenuItem menuItem;
 
@@ -228,45 +195,5 @@ class _CreateOptionItem extends StatelessWidget {
   void _navigate(BuildContext context) {
     Navigator.pop(context);
     Navigator.pushNamed(context, menuItem.route);
-  }
-}
-
-/// Solutions tab with placeholder for future feature
-class SolutionsTab extends StatelessWidget {
-  const SolutionsTab({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.lightbulb_outline,
-            color: AppColors.warning,
-            size: 48,
-          ),
-          const SizedBox(height: 16),
-          QlzLabel(
-            'Lời giải',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: AppColors.darkText,
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              'Đang phát triển tính năng giúp bạn giải đáp các bài tập',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.darkTextSecondary,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

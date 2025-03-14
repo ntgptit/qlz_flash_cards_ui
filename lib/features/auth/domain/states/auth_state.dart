@@ -1,6 +1,6 @@
-// lib/features/auth/logic/states/auth_state.dart
 import 'package:equatable/equatable.dart';
 
+// Có thể giữ Equatable hoặc chuyển sang Freezed nếu dự án sử dụng Freezed
 abstract class AuthState extends Equatable {
   const AuthState();
 
