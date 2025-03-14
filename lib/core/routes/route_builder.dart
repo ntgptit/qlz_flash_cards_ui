@@ -6,15 +6,14 @@ import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/flashcard_module.dart';
 import 'package:qlz_flash_cards_ui/features/library/library_module.dart';
 import 'package:qlz_flash_cards_ui/features/module/module_module.dart';
+import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_settings.dart';
+import 'package:qlz_flash_cards_ui/features/quiz/quiz_module.dart';
 
 import '../../features/auth/screens/forgot_password_screen.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/profile/profile_screen.dart';
-import '../../features/quiz/models/quiz_settings.dart';
-import '../../features/quiz/screens/quiz_screen.dart';
-import '../../features/quiz/screens/quiz_screen_settings.dart';
 import '../../features/study/screens/study_settings_screen.dart';
 import '../../features/welcome_screen.dart';
 import 'route_logger.dart';
@@ -137,8 +136,8 @@ class RouteBuilder {
             final moduleName = params.getString('moduleName', 'Bài kiểm tra');
             final flashcards = params.getFlashcards('flashcards');
 
-            // Truyền ref tới các providers cần thiết
-            return QuizScreenSettings(
+            return QuizModule.provideRiverpodSettingsScreen(
+              ref: ref,
               moduleId: moduleId,
               moduleName: moduleName,
               flashcards: flashcards,
@@ -163,8 +162,8 @@ class RouteBuilder {
               'timePerQuestion': params.getInt('timePerQuestion', 30),
             };
 
-            // Truyền ref tới các providers cần thiết
-            return QuizScreen(
+            return QuizModule.provideRiverpodQuizScreen(
+              ref: ref,
               quizData: quizData,
             );
           },

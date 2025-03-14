@@ -21,8 +21,8 @@ class AppRoutes {
   static const String listStudyModuleOfFolder = '/list-study-module-of-folder';
   static const String moduleDetail = '/module-detail';
   static const String studyFlashcards = '/study-flashcards';
-  static const String quiz = '/quiz';
   static const String quizSettings = '/quiz-settings';
+  static const String quiz = '/quiz';
   static const String profile = '/profile';
   static const String createStudyModule = '/create-study-module';
   static const String moduleSettings = '/module-settings';

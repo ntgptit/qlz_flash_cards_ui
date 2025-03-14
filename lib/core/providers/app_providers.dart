@@ -18,6 +18,8 @@ import 'package:qlz_flash_cards_ui/features/module/logic/cubit/create_module_cub
 import 'package:qlz_flash_cards_ui/features/module/logic/cubit/module_detail_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/module/logic/cubit/module_settings_cubit.dart';
 import 'package:qlz_flash_cards_ui/features/module/logic/cubit/study_module_cubit.dart';
+import 'package:qlz_flash_cards_ui/features/quiz/logic/cubit/quiz_cubit.dart';
+import 'package:qlz_flash_cards_ui/features/quiz/logic/cubit/quiz_settings_cubit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 //-------------------------------------------------------------------------
@@ -246,6 +248,35 @@ final moduleSettingsCubitProvider =
 final flashcardCubitProvider = Provider.autoDispose<FlashcardCubit>((ref) {
   final repository = ref.watch(flashcardRepositoryProvider);
   final cubit = FlashcardCubit(repository);
+
+  // Dispose khi không còn cần thiết
+  ref.onDispose(() {
+    cubit.close();
+  });
+
+  return cubit;
+});
+
+//-------------------------------------------------------------------------
+// QUIZ CUBIT PROVIDERS
+//-------------------------------------------------------------------------
+
+/// QuizSettingsCubit provider
+final quizSettingsCubitProvider =
+    Provider.autoDispose<QuizSettingsCubit>((ref) {
+  final cubit = QuizSettingsCubit();
+
+  // Dispose khi không còn cần thiết
+  ref.onDispose(() {
+    cubit.close();
+  });
+
+  return cubit;
+});
+
+/// QuizCubit provider
+final quizCubitProvider = Provider.autoDispose<QuizCubit>((ref) {
+  final cubit = QuizCubit();
 
   // Dispose khi không còn cần thiết
   ref.onDispose(() {

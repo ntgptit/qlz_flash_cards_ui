@@ -1,6 +1,6 @@
 // lib/features/quiz/models/quiz_result.dart
 
-import 'package:qlz_flash_cards_ui/features/quiz/models/quiz_settings.dart';
+import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_settings.dart';
 
 /// Model lưu trữ kết quả bài kiểm tra
 class QuizResult {
