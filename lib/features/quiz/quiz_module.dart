@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_settings.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/presentation/providers/quiz_providers.dart';
+import 'package:qlz_flash_cards_ui/features/quiz/presentation/providers/quiz_settings_providers.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/presentation/screens/quiz_screen.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/presentation/screens/quiz_screen_settings.dart';
 
@@ -16,14 +17,28 @@ final class QuizModule {
     required String moduleName,
     required List<Flashcard> flashcards,
   }) {
+    debugPrint(
+        'Entering provideRiverpodSettingsScreen with flashcards length: ${flashcards.length}');
     return ProviderScope(
-      overrides: const [
-        // Override providers as needed
+      overrides: [
+        quizSettingsProvider.overrideWith((ref) {
+          debugPrint('Overriding quizSettingsProvider');
+          final notifier = QuizSettingsNotifier();
+          notifier.initialize(flashcards.length);
+          debugPrint(
+              'quizSettingsProvider initialized with questionCount: ${notifier.state.questionCount}');
+          return notifier;
+        }),
       ],
-      child: QuizScreenSettings(
-        moduleId: moduleId,
-        moduleName: moduleName,
-        flashcards: flashcards,
+      child: Builder(
+        builder: (context) {
+          debugPrint('Building QuizScreenSettings child');
+          return QuizScreenSettings(
+            moduleId: moduleId,
+            moduleName: moduleName,
+            flashcards: flashcards,
+          );
+        },
       ),
     );
   }
@@ -35,11 +50,12 @@ final class QuizModule {
     return ProviderScope(
       overrides: [
         quizProvider.overrideWith((ref) {
-          // Sử dụng ref.read thay vì ref.watch để tránh dependency cycles
+          debugPrint('Overriding quizProvider');
           final quizService = ref.read(quizServiceProvider);
-          final notifier = QuizNotifier(quizService: quizService);
-
-          // Khởi tạo trực tiếp thay vì dùng microtask để tránh lỗi timing
+          final notifier = QuizNotifier(
+            quizService: quizService,
+            ref: ref,
+          );
           notifier.initialize(
             quizType: quizData['quizType'] as QuizType,
             difficulty: quizData['difficulty'] as QuizDifficulty,
@@ -52,7 +68,6 @@ final class QuizModule {
             enableTimer: quizData['enableTimer'] as bool,
             timePerQuestion: quizData['timePerQuestion'] as int,
           );
-
           return notifier;
         }),
       ],
@@ -69,8 +84,6 @@ final class QuizModule {
     required int totalQuestions,
     required int completionTimeInSeconds,
   }) {
-    // This would be implemented similarly to the above methods,
-    // creating a screen with proper provider overrides
     throw UnimplementedError('Quiz result screen not yet implemented');
   }
 }

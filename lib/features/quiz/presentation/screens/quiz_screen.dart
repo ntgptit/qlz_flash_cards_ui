@@ -18,13 +18,9 @@ class QuizScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     try {
-      // Sử dụng selector để chỉ rebuild khi status thay đổi
       final status = ref.watch(quizProvider.select((state) => state.status));
-
-      // Lắng nghe các thay đổi trạng thái
       ref.listen<QuizStatus>(quizProvider.select((state) => state.status),
           (previous, current) => _handleStatusChange(context, current, ref));
-
       return QlzScreen(
         appBar: _buildAppBar(context, ref),
         padding: EdgeInsets.zero,
@@ -33,7 +29,6 @@ class QuizScreen extends ConsumerWidget {
     } catch (e, stackTrace) {
       debugPrint('Error building QuizScreen: $e');
       debugPrint('Stack trace: $stackTrace');
-
       return Scaffold(
         appBar: AppBar(
           title: const Text('Quiz'),
@@ -42,9 +37,22 @@ class QuizScreen extends ConsumerWidget {
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
-        body: const Center(
-          child: Text(
-              'An error occurred while loading the quiz. Please try again.'),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('An error occurred while loading the quiz.'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => ref.refresh(quizProvider),
+                child: const Text('Try Again'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Go Back'),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -54,7 +62,6 @@ class QuizScreen extends ConsumerWidget {
     try {
       final moduleName =
           ref.watch(quizProvider.select((state) => state.moduleName));
-
       return QlzAppBar(
         title: moduleName,
         automaticallyImplyLeading: true,
@@ -79,26 +86,15 @@ class QuizScreen extends ConsumerWidget {
 
   Widget _buildContent(BuildContext context, WidgetRef ref, QuizStatus status) {
     try {
-      // Kiểm tra trạng thái ban đầu
       if (status == QuizStatus.initial) {
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
-      }
-
-      // Nếu đã thoát, quay về màn hình trước
-      if (status == QuizStatus.exited) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          Navigator.of(context).pop();
-        });
         return const Center(child: CircularProgressIndicator());
       }
-
-      // Lấy các dữ liệu cần thiết từ state
+      if (status == QuizStatus.exited) {
+        return const SizedBox
+            .shrink(); // Không hiển thị gì, đã xử lý trong _handleStatusChange
+      }
       final questions =
           ref.watch(quizProvider.select((state) => state.questions));
-
-      // Kiểm tra danh sách câu hỏi
       if (questions.isEmpty) {
         return QlzEmptyState.error(
           title: 'Không có câu hỏi',
@@ -107,10 +103,7 @@ class QuizScreen extends ConsumerWidget {
           onAction: () => Navigator.of(context).pop(),
         );
       }
-
-      // Sử dụng provider riêng cho câu hỏi hiện tại để tối ưu hóa rebuild
       final currentQuestion = ref.watch(currentQuestionProvider);
-
       if (currentQuestion == null) {
         return QlzEmptyState.error(
           title: 'Lỗi bài kiểm tra',
@@ -119,14 +112,10 @@ class QuizScreen extends ConsumerWidget {
           onAction: () => Navigator.of(context).pop(),
         );
       }
-
       return SafeArea(
         child: Column(
           children: [
-            // Sử dụng QuizHeaderConsumer thay vì QuizHeaderView
             const QuizHeaderConsumer(),
-
-            // Quiz Content
             Expanded(
               child: SingleChildScrollView(
                 child: Padding(
@@ -134,19 +123,14 @@ class QuizScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Quiz Question
                       QuizQuestionCard(question: currentQuestion.question),
                       const SizedBox(height: 24),
-
-                      // Quiz Answers
                       const QuizAnswersView(),
                     ],
                   ),
                 ),
               ),
             ),
-
-            // Quiz Footer
             const QuizFooterView(),
           ],
         ),
@@ -154,7 +138,6 @@ class QuizScreen extends ConsumerWidget {
     } catch (e, stackTrace) {
       debugPrint('Error building content: $e');
       debugPrint('Stack trace: $stackTrace');
-
       return QlzEmptyState.error(
         title: 'Lỗi bài kiểm tra',
         message: 'Đã xảy ra lỗi khi tải bài kiểm tra. Vui lòng thử lại sau.',
@@ -175,7 +158,6 @@ class QuizScreen extends ConsumerWidget {
           Navigator.of(context).pop();
           break;
         default:
-          // Do nothing for other status values
           break;
       }
     } catch (e) {
@@ -206,13 +188,10 @@ class QuizScreen extends ConsumerWidget {
 
   void _showResultModal(BuildContext context, WidgetRef ref) {
     try {
-      // Sử dụng provider để lấy kết quả
       final quizService = ref.read(quizServiceProvider);
       final state = ref.read(quizProvider);
-
       final (resultMessage, resultColor) =
           quizService.getResultMessage(state.score);
-
       QlzModal.showBottomSheet(
         context: context,
         isDismissible: false,
@@ -234,36 +213,26 @@ class QuizScreen extends ConsumerWidget {
       );
     } catch (e) {
       debugPrint('Error showing result modal: $e');
-      // Fallback to basic navigation
       Navigator.of(context).pop();
     }
   }
 }
 
-// -------------------- OPTIMIZED SUB-COMPONENTS --------------------
-
-// Answers section that only rebuilds when answers or question changes
 class QuizAnswersView extends ConsumerWidget {
   const QuizAnswersView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     try {
-      // Sử dụng provider có sẵn để lấy câu hỏi hiện tại
       final currentQuestion = ref.watch(currentQuestionProvider);
       if (currentQuestion == null) return const SizedBox.shrink();
-
-      // Lấy các state cần thiết
       final userAnswer =
           ref.watch(quizProvider.select((s) => s.currentUserAnswer));
       final hasAnswered =
           ref.watch(quizProvider.select((s) => s.hasAnsweredCurrentQuestion));
       final showCorrectAnswers =
           ref.watch(quizProvider.select((s) => s.showCorrectAnswers));
-
-      // Lấy service để hiển thị nhãn
       final quizService = ref.read(quizServiceProvider);
-
       return QuizAnswersSection(
         quizType: currentQuestion.quizType,
         questionTypeLabel:
@@ -288,7 +257,6 @@ class QuizAnswersView extends ConsumerWidget {
   }
 }
 
-// Footer component that only rebuilds when relevant data changes
 class QuizFooterView extends ConsumerWidget {
   const QuizFooterView({super.key});
 
@@ -305,14 +273,8 @@ class QuizFooterView extends ConsumerWidget {
           ref.watch(quizProvider.select((s) => s.lastAnswerWasCorrect));
       final showCorrectAnswers =
           ref.watch(quizProvider.select((s) => s.showCorrectAnswers));
-
-      // Hiển thị nút tiếp tục khi:
-      // 1. Người dùng đã trả lời
-      // 2. Và trả lời sai
-      // 3. Và cài đặt hiển thị đáp án đúng được bật
       final showContinueButton =
           hasAnswered && !lastAnswerWasCorrect && showCorrectAnswers;
-
       return QuizFooter(
         currentQuestionIndex: currentQuestionIndex,
         totalQuestions: totalQuestions,

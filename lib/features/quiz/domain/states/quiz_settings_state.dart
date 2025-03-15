@@ -14,8 +14,8 @@ class QuizSettingsState extends Equatable {
   const QuizSettingsState({
     this.quizType = QuizType.multipleChoice,
     this.difficulty = QuizDifficulty.medium,
-    this.questionCount = 1,
-    this.maxQuestionCount = 1,
+    this.questionCount = 0, // Đặt 0 làm giá trị mặc định ban đầu
+    this.maxQuestionCount = 0, // Đặt 0 làm giá trị mặc định ban đầu
     this.shuffleQuestions = true,
     this.showCorrectAnswers = true,
     this.enableTimer = false,

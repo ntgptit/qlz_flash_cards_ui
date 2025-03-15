@@ -15,7 +15,6 @@ class QuizOptionsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(quizSettingsProvider);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -28,8 +27,6 @@ class QuizOptionsSection extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 16),
-
-        // Switch options
         SwitchOption(
           label: 'Trộn câu hỏi',
           description: 'Trộn thứ tự các câu hỏi mỗi lần làm bài',
@@ -38,7 +35,6 @@ class QuizOptionsSection extends ConsumerWidget {
               .read(quizSettingsProvider.notifier)
               .setShuffleQuestions(value),
         ),
-
         SwitchOption(
           label: 'Hiển thị đáp án đúng',
           description: 'Hiển thị đáp án đúng sau khi trả lời mỗi câu',
@@ -47,7 +43,6 @@ class QuizOptionsSection extends ConsumerWidget {
               .read(quizSettingsProvider.notifier)
               .setShowCorrectAnswers(value),
         ),
-
         SwitchOption(
           label: 'Bộ đếm thời gian',
           description: 'Giới hạn thời gian cho mỗi câu hỏi',
@@ -62,8 +57,6 @@ class QuizOptionsSection extends ConsumerWidget {
             }
           },
         ),
-
-        // Timer options
         if (settings.enableTimer) ...[
           const SizedBox(height: 16),
           TimePerQuestionInput(hasAttemptedSubmit: hasAttemptedSubmit),
@@ -75,7 +68,6 @@ class QuizOptionsSection extends ConsumerWidget {
   }
 }
 
-// SwitchOption Component
 class SwitchOption extends StatelessWidget {
   final String label;
   final String? description;
@@ -144,7 +136,6 @@ class SwitchOption extends StatelessWidget {
   }
 }
 
-// TimePerQuestionInput Component
 class TimePerQuestionInput extends ConsumerWidget {
   final bool hasAttemptedSubmit;
 
@@ -158,7 +149,6 @@ class TimePerQuestionInput extends ConsumerWidget {
     final controller = ref.watch(timePerQuestionControllerProvider);
     final focusNode = ref.watch(timePerQuestionFocusProvider);
     final timePerQuestion = ref.watch(timePerQuestionProvider);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -179,13 +169,11 @@ class TimePerQuestionInput extends ConsumerWidget {
             if (value.isNotEmpty) {
               final time = int.tryParse(value);
               if (time != null) {
-                // Cập nhật local state
                 ref.read(timePerQuestionProvider.notifier).state = time;
               }
             }
           },
           onSubmitted: (_) {
-            // Validate và cập nhật global state
             final text = controller.text.trim();
             if (text.isEmpty) {
               controller.text = '30';
@@ -193,14 +181,11 @@ class TimePerQuestionInput extends ConsumerWidget {
               ref.read(quizSettingsProvider.notifier).setTimePerQuestion(30);
               return;
             }
-
             final time = int.tryParse(text) ?? 30;
             final validatedTime = time.clamp(5, 300);
-
             if (time != validatedTime) {
               controller.text = validatedTime.toString();
             }
-
             ref.read(timePerQuestionProvider.notifier).state = validatedTime;
             ref
                 .read(quizSettingsProvider.notifier)
@@ -219,7 +204,6 @@ class TimePerQuestionInput extends ConsumerWidget {
   }
 }
 
-// TimePerQuestionSlider Component
 class TimePerQuestionSlider extends ConsumerWidget {
   const TimePerQuestionSlider({super.key});
 
@@ -227,7 +211,11 @@ class TimePerQuestionSlider extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final timePerQuestion = ref.watch(timePerQuestionProvider);
     final controller = ref.watch(timePerQuestionControllerProvider);
-
+    ref.listen<int>(timePerQuestionProvider, (previous, next) {
+      if (next != int.tryParse(controller.text)) {
+        controller.text = next.toString();
+      }
+    });
     return Row(
       children: [
         const Text(

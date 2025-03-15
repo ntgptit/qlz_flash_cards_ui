@@ -16,9 +16,7 @@ class QuizQuestionSettings extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Lắng nghe state của question count từ provider
     final questionCount = ref.watch(questionCountProvider);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -39,16 +37,11 @@ class QuizQuestionSettings extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 16),
-
-        // TextField control
         QuestionCountInput(
           maxQuestionCount: maxQuestionCount,
           hasAttemptedSubmit: hasAttemptedSubmit,
         ),
-
         const SizedBox(height: 8),
-
-        // Range indicators
         QuestionCountRangeInfo(maxQuestionCount: maxQuestionCount),
       ],
     );
@@ -69,8 +62,6 @@ class QuestionCountInput extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.watch(questionCountControllerProvider);
     final focusNode = ref.watch(questionCountFocusProvider);
-    final questionCount = ref.watch(questionCountProvider);
-
     return QlzTextField(
       controller: controller,
       focusNode: focusNode,
@@ -88,22 +79,20 @@ class QuestionCountInput extends ConsumerWidget {
         }
       },
       onSubmitted: (_) {
-        // Validate và cập nhật state
         final text = controller.text.trim();
         if (text.isEmpty) {
-          controller.text = '10';
-          ref.read(questionCountProvider.notifier).state = 10;
-          ref.read(quizSettingsProvider.notifier).setQuestionCount(10);
+          controller.text = maxQuestionCount.toString();
+          ref.read(questionCountProvider.notifier).state = maxQuestionCount;
+          ref
+              .read(quizSettingsProvider.notifier)
+              .setQuestionCount(maxQuestionCount);
           return;
         }
-
-        final count = int.tryParse(text) ?? 10;
+        final count = int.tryParse(text) ?? maxQuestionCount;
         final validatedCount = count.clamp(1, maxQuestionCount);
-
         if (count != validatedCount) {
           controller.text = validatedCount.toString();
         }
-
         ref.read(questionCountProvider.notifier).state = validatedCount;
         ref
             .read(quizSettingsProvider.notifier)
