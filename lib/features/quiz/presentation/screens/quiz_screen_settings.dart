@@ -4,7 +4,7 @@ import 'package:qlz_flash_cards_ui/core/routes/app_routes.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_settings.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/domain/states/quiz_settings_state.dart';
-import 'package:qlz_flash_cards_ui/features/quiz/presentation/providers/quiz_providers.dart';
+import 'package:qlz_flash_cards_ui/features/quiz/presentation/providers/quiz_settings_providers.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/presentation/widgets/quiz_help_dialog.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/presentation/widgets/quiz_options_section.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/presentation/widgets/quiz_question_settings.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
-import 'package:qlz_flash_cards_ui/features/quiz/presentation/providers/quiz_providers.dart';
+import 'package:qlz_flash_cards_ui/features/quiz/presentation/providers/quiz_settings_providers.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/inputs/qlz_text_field.dart';
 
 class QuizOptionsSection extends ConsumerWidget {
