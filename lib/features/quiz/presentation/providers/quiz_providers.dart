@@ -183,17 +183,28 @@ class QuizNotifier extends StateNotifier<QuizState> {
     if (_disposed || state.status != QuizStatus.inProgress) return;
     if (state.hasAnsweredCurrentQuestion) return;
 
+    final isCorrect = answer?.isCorrect ?? false;
+
     _answerCurrentQuestion(answer);
     _questionTimer?.cancel();
 
-    if (state.showCorrectAnswers) {
+    // Nếu không hiển thị đáp án đúng, chuyển sang câu tiếp ngay
+    if (!state.showCorrectAnswers) {
+      nextQuestion();
+      return;
+    }
+
+    // Nếu trả lời đúng, tự động chuyển sau 1.5 giây
+    if (isCorrect) {
       Future.delayed(const Duration(milliseconds: 1500), () {
         if (_disposed) return;
         nextQuestion();
       });
-    } else {
-      nextQuestion();
+      return;
     }
+
+    // Trường hợp trả lời sai và hiển thị đáp án đúng:
+    // KHÔNG tự động chuyển câu hỏi, để nút tiếp tục hiển thị
   }
 
   void _answerCurrentQuestion(QuizAnswer? answer) {
@@ -207,9 +218,12 @@ class QuizNotifier extends StateNotifier<QuizState> {
 
     updatedAnswers[state.currentQuestionIndex] = answer;
 
+    final isCorrect = answer?.isCorrect ?? false;
+
     if (!_disposed) {
       state = state.copyWith(
         userAnswers: updatedAnswers,
+        lastAnswerWasCorrect: isCorrect,
       );
     }
   }

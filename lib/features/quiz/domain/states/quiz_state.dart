@@ -28,6 +28,7 @@ class QuizState extends Equatable {
   final int timePerQuestion;
   final int remainingTime;
   final int elapsedTime;
+  final bool lastAnswerWasCorrect;
 
   const QuizState({
     this.quizType = QuizType.multipleChoice,
@@ -45,6 +46,7 @@ class QuizState extends Equatable {
     this.timePerQuestion = 30,
     this.remainingTime = 30,
     this.elapsedTime = 0,
+    this.lastAnswerWasCorrect = false,
   });
 
   QuizState copyWith({
@@ -63,6 +65,7 @@ class QuizState extends Equatable {
     int? timePerQuestion,
     int? remainingTime,
     int? elapsedTime,
+    bool? lastAnswerWasCorrect,
   }) {
     return QuizState(
       quizType: quizType ?? this.quizType,
@@ -80,6 +83,7 @@ class QuizState extends Equatable {
       timePerQuestion: timePerQuestion ?? this.timePerQuestion,
       remainingTime: remainingTime ?? this.remainingTime,
       elapsedTime: elapsedTime ?? this.elapsedTime,
+      lastAnswerWasCorrect: lastAnswerWasCorrect ?? this.lastAnswerWasCorrect,
     );
   }
 
@@ -148,5 +152,6 @@ class QuizState extends Equatable {
         timePerQuestion,
         remainingTime,
         elapsedTime,
+        lastAnswerWasCorrect,
       ];
 }

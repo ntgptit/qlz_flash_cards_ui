@@ -301,11 +301,23 @@ class QuizFooterView extends ConsumerWidget {
           ref.watch(quizProvider.select((s) => s.questions.length));
       final hasAnswered =
           ref.watch(quizProvider.select((s) => s.hasAnsweredCurrentQuestion));
+      final lastAnswerWasCorrect =
+          ref.watch(quizProvider.select((s) => s.lastAnswerWasCorrect));
+      final showCorrectAnswers =
+          ref.watch(quizProvider.select((s) => s.showCorrectAnswers));
+
+      // Hiển thị nút tiếp tục khi:
+      // 1. Người dùng đã trả lời
+      // 2. Và trả lời sai
+      // 3. Và cài đặt hiển thị đáp án đúng được bật
+      final showContinueButton =
+          hasAnswered && !lastAnswerWasCorrect && showCorrectAnswers;
 
       return QuizFooter(
         currentQuestionIndex: currentQuestionIndex,
         totalQuestions: totalQuestions,
         hasAnswered: hasAnswered,
+        showContinueButton: showContinueButton,
         onPreviousPressed: () =>
             ref.read(quizProvider.notifier).previousQuestion(),
         onNextPressed: () => ref.read(quizProvider.notifier).nextQuestion(),
