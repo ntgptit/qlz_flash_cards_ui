@@ -35,24 +35,23 @@ final class QuizModule {
     return ProviderScope(
       overrides: [
         quizProvider.overrideWith((ref) {
-          final quizService = ref.watch(quizServiceProvider);
+          // Sử dụng ref.read thay vì ref.watch để tránh dependency cycles
+          final quizService = ref.read(quizServiceProvider);
           final notifier = QuizNotifier(quizService: quizService);
 
-          // Initialize the quiz state on first build
-          Future.microtask(() {
-            notifier.initialize(
-              quizType: quizData['quizType'] as QuizType,
-              difficulty: quizData['difficulty'] as QuizDifficulty,
-              flashcards: quizData['flashcards'] as List<Flashcard>,
-              moduleId: quizData['moduleId'] as String,
-              moduleName: quizData['moduleName'] as String,
-              questionCount: quizData['questionCount'] as int,
-              shuffleQuestions: quizData['shuffleQuestions'] as bool,
-              showCorrectAnswers: quizData['showCorrectAnswers'] as bool,
-              enableTimer: quizData['enableTimer'] as bool,
-              timePerQuestion: quizData['timePerQuestion'] as int,
-            );
-          });
+          // Khởi tạo trực tiếp thay vì dùng microtask để tránh lỗi timing
+          notifier.initialize(
+            quizType: quizData['quizType'] as QuizType,
+            difficulty: quizData['difficulty'] as QuizDifficulty,
+            flashcards: quizData['flashcards'] as List<Flashcard>,
+            moduleId: quizData['moduleId'] as String,
+            moduleName: quizData['moduleName'] as String,
+            questionCount: quizData['questionCount'] as int,
+            shuffleQuestions: quizData['shuffleQuestions'] as bool,
+            showCorrectAnswers: quizData['showCorrectAnswers'] as bool,
+            enableTimer: quizData['enableTimer'] as bool,
+            timePerQuestion: quizData['timePerQuestion'] as int,
+          );
 
           return notifier;
         }),

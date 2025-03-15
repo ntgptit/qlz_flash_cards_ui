@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/features/flashcard/data/models/flashcard_model.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_answer.dart';
 import 'package:qlz_flash_cards_ui/features/quiz/data/models/quiz_question.dart';
@@ -33,7 +34,7 @@ void efficientShuffle<T>(List<T> list) {
 // Quiz Provider
 final quizProvider =
     StateNotifierProvider.autoDispose<QuizNotifier, QuizState>((ref) {
-  final quizService = ref.watch(quizServiceProvider);
+  final quizService = ref.read(quizServiceProvider);
   return QuizNotifier(quizService: quizService);
 });
 
@@ -59,42 +60,65 @@ class QuizNotifier extends StateNotifier<QuizState> {
     required bool enableTimer,
     required int timePerQuestion,
   }) {
-    final selectedFlashcards = _quizService.selectFlashcards(
-      flashcards,
-      questionCount,
-      shuffleQuestions,
-    );
+    try {
+      // Kiểm tra input để tránh lỗi
+      if (flashcards.isEmpty) {
+        state = state.copyWith(
+          status: QuizStatus.exited,
+        );
+        return;
+      }
 
-    final questions = _quizService.createQuestions(
-      selectedFlashcards,
-      quizType,
-      difficulty,
-      flashcards,
-    );
+      // Giới hạn số lượng câu hỏi
+      final limitedQuestionCount = questionCount.clamp(1, flashcards.length);
 
-    state = state.copyWith(
-      quizType: quizType,
-      difficulty: difficulty,
-      moduleId: moduleId,
-      moduleName: moduleName,
-      questions: questions,
-      currentQuestionIndex: 0,
-      showCorrectAnswers: showCorrectAnswers,
-      enableTimer: enableTimer,
-      timePerQuestion: timePerQuestion,
-      status: QuizStatus.inProgress,
-    );
+      final selectedFlashcards = _quizService.selectFlashcards(
+        flashcards,
+        limitedQuestionCount,
+        shuffleQuestions,
+      );
 
-    if (enableTimer) {
-      _startQuestionTimer();
+      final questions = _quizService.createQuestions(
+        selectedFlashcards,
+        quizType,
+        difficulty,
+        flashcards,
+      );
+
+      state = state.copyWith(
+        quizType: quizType,
+        difficulty: difficulty,
+        moduleId: moduleId,
+        moduleName: moduleName,
+        questions: questions,
+        currentQuestionIndex: 0,
+        showCorrectAnswers: showCorrectAnswers,
+        enableTimer: enableTimer,
+        timePerQuestion: timePerQuestion,
+        status: QuizStatus.inProgress,
+      );
+
+      if (enableTimer && !_disposed) {
+        _startQuestionTimer();
+      }
+
+      if (!_disposed) {
+        _startQuizTimer();
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Error initializing quiz: $e');
+      debugPrint('Stack trace: $stackTrace');
+
+      // Cập nhật state thành error
+      state = state.copyWith(
+        status: QuizStatus.exited,
+      );
     }
-
-    _startQuizTimer();
   }
 
   void _startQuestionTimer() {
     _questionTimer?.cancel();
-    if (!state.enableTimer) return;
+    if (_disposed || !state.enableTimer) return;
 
     state = state.copyWith(
       remainingTime: state.timePerQuestion,
@@ -111,15 +135,18 @@ class QuizNotifier extends StateNotifier<QuizState> {
         timer.cancel();
         _handleTimeUp();
       } else {
-        state = state.copyWith(
-          remainingTime: newTime,
-        );
+        if (!_disposed) {
+          state = state.copyWith(
+            remainingTime: newTime,
+          );
+        }
       }
     });
   }
 
   void _startQuizTimer() {
     _quizTimer?.cancel();
+    if (_disposed) return;
 
     state = state.copyWith(
       elapsedTime: 0,
@@ -131,9 +158,11 @@ class QuizNotifier extends StateNotifier<QuizState> {
         return;
       }
 
-      state = state.copyWith(
-        elapsedTime: state.elapsedTime + 1,
-      );
+      if (!_disposed) {
+        state = state.copyWith(
+          elapsedTime: state.elapsedTime + 1,
+        );
+      }
     });
   }
 
@@ -151,8 +180,7 @@ class QuizNotifier extends StateNotifier<QuizState> {
   }
 
   void answerQuestion(QuizAnswer? answer) {
-    if (_disposed) return;
-    if (state.status != QuizStatus.inProgress) return;
+    if (_disposed || state.status != QuizStatus.inProgress) return;
     if (state.hasAnsweredCurrentQuestion) return;
 
     _answerCurrentQuestion(answer);
@@ -169,6 +197,8 @@ class QuizNotifier extends StateNotifier<QuizState> {
   }
 
   void _answerCurrentQuestion(QuizAnswer? answer) {
+    if (_disposed) return;
+
     final updatedAnswers = List<QuizAnswer?>.from(state.userAnswers);
 
     while (updatedAnswers.length <= state.currentQuestionIndex) {
@@ -177,83 +207,95 @@ class QuizNotifier extends StateNotifier<QuizState> {
 
     updatedAnswers[state.currentQuestionIndex] = answer;
 
-    state = state.copyWith(
-      userAnswers: updatedAnswers,
-    );
+    if (!_disposed) {
+      state = state.copyWith(
+        userAnswers: updatedAnswers,
+      );
+    }
   }
 
   void nextQuestion() {
-    if (_disposed) return;
-    if (state.status != QuizStatus.inProgress) return;
+    if (_disposed || state.status != QuizStatus.inProgress) return;
 
     if (state.currentQuestionIndex >= state.questions.length - 1) {
       _finishQuiz();
       return;
     }
 
-    state = state.copyWith(
-      currentQuestionIndex: state.currentQuestionIndex + 1,
-    );
+    if (!_disposed) {
+      state = state.copyWith(
+        currentQuestionIndex: state.currentQuestionIndex + 1,
+      );
 
-    if (state.enableTimer) {
-      _startQuestionTimer();
+      if (state.enableTimer) {
+        _startQuestionTimer();
+      }
     }
   }
 
   void previousQuestion() {
-    if (_disposed) return;
-    if (state.status != QuizStatus.inProgress) return;
+    if (_disposed || state.status != QuizStatus.inProgress) return;
     if (state.currentQuestionIndex <= 0) return;
 
-    state = state.copyWith(
-      currentQuestionIndex: state.currentQuestionIndex - 1,
-    );
+    if (!_disposed) {
+      state = state.copyWith(
+        currentQuestionIndex: state.currentQuestionIndex - 1,
+      );
 
-    if (state.enableTimer) {
-      _startQuestionTimer();
+      if (state.enableTimer) {
+        _startQuestionTimer();
+      }
     }
   }
 
   void _finishQuiz() {
     _stopAllTimers();
 
+    if (_disposed) return;
+
     final (score, correctCount) = _quizService.calculateScore(
       state.questions,
       state.userAnswers,
     );
 
-    state = state.copyWith(
-      status: QuizStatus.completed,
-      score: score,
-      correctAnswersCount: correctCount,
-    );
+    if (!_disposed) {
+      state = state.copyWith(
+        status: QuizStatus.completed,
+        score: score,
+        correctAnswersCount: correctCount,
+      );
+    }
   }
 
   void restartQuiz() {
-    final questions = state.questions;
+    if (_disposed) return;
 
-    state = state.copyWith(
-      userAnswers: [],
-      currentQuestionIndex: 0,
-      status: QuizStatus.inProgress,
-      score: 0,
-      correctAnswersCount: 0,
-      elapsedTime: 0,
-    );
+    if (!_disposed) {
+      state = state.copyWith(
+        userAnswers: [],
+        currentQuestionIndex: 0,
+        status: QuizStatus.inProgress,
+        score: 0,
+        correctAnswersCount: 0,
+        elapsedTime: 0,
+      );
 
-    if (state.enableTimer) {
-      _startQuestionTimer();
+      if (state.enableTimer) {
+        _startQuestionTimer();
+      }
+
+      _startQuizTimer();
     }
-
-    _startQuizTimer();
   }
 
   void exitQuiz() {
     _stopAllTimers();
 
-    state = state.copyWith(
-      status: QuizStatus.exited,
-    );
+    if (!_disposed) {
+      state = state.copyWith(
+        status: QuizStatus.exited,
+      );
+    }
   }
 
   void _stopAllTimers() {
@@ -271,12 +313,17 @@ class QuizNotifier extends StateNotifier<QuizState> {
 
 // Current Question Provider for efficient rebuild
 final currentQuestionProvider = Provider.autoDispose<QuizQuestion?>((ref) {
-  final quizState = ref.watch(quizProvider);
+  try {
+    final quizState = ref.watch(quizProvider);
 
-  if (quizState.questions.isEmpty ||
-      quizState.currentQuestionIndex >= quizState.questions.length) {
+    if (quizState.questions.isEmpty ||
+        quizState.currentQuestionIndex >= quizState.questions.length) {
+      return null;
+    }
+
+    return quizState.questions[quizState.currentQuestionIndex];
+  } catch (e) {
+    debugPrint('Error in currentQuestionProvider: $e');
     return null;
   }
-
-  return quizState.questions[quizState.currentQuestionIndex];
-});
+}, dependencies: [quizProvider]);
