@@ -1,4 +1,3 @@
-// lib/features/quiz/presentation/widgets/quiz_footer.dart
 import 'package:flutter/material.dart';
 import 'package:qlz_flash_cards_ui/config/app_colors.dart';
 import 'package:qlz_flash_cards_ui/shared/widgets/buttons/qlz_button.dart';
@@ -7,6 +6,7 @@ class QuizFooter extends StatelessWidget {
   final int currentQuestionIndex;
   final int totalQuestions;
   final bool hasAnswered;
+  final bool showContinueButton;
   final VoidCallback onPreviousPressed;
   final VoidCallback onNextPressed;
   final VoidCallback onSkipPressed;
@@ -16,6 +16,7 @@ class QuizFooter extends StatelessWidget {
     required this.currentQuestionIndex,
     required this.totalQuestions,
     required this.hasAnswered,
+    this.showContinueButton = false,
     required this.onPreviousPressed,
     required this.onNextPressed,
     required this.onSkipPressed,
@@ -51,13 +52,36 @@ class QuizFooter extends StatelessWidget {
             const SizedBox(width: 120), // Placeholder để giữ layout
 
           // Nút tiếp theo/hoàn thành
-          QlzButton.primary(
-            label: isLastQuestion ? 'Hoàn thành' : 'Tiếp theo',
-            icon: isLastQuestion ? Icons.check_circle : Icons.arrow_forward,
-            onPressed: hasAnswered ? onNextPressed : onSkipPressed,
-          ),
+          _buildNextButton(isLastQuestion),
         ],
       ),
+    );
+  }
+
+  Widget _buildNextButton(bool isLastQuestion) {
+    // Nếu đã trả lời sai và cần hiển thị nút xác nhận
+    if (showContinueButton) {
+      return QlzButton.primary(
+        label: isLastQuestion ? 'Hoàn thành' : 'Tiếp tục',
+        icon: isLastQuestion ? Icons.check_circle : Icons.arrow_forward,
+        onPressed: onNextPressed,
+      );
+    }
+
+    // Nếu đã trả lời (và trả lời đúng)
+    if (hasAnswered) {
+      return QlzButton.primary(
+        label: isLastQuestion ? 'Hoàn thành' : 'Tiếp theo',
+        icon: isLastQuestion ? Icons.check_circle : Icons.arrow_forward,
+        onPressed: onNextPressed,
+      );
+    }
+
+    // Nếu chưa trả lời
+    return QlzButton.primary(
+      label: isLastQuestion ? 'Hoàn thành' : 'Bỏ qua',
+      icon: isLastQuestion ? Icons.check_circle : Icons.arrow_forward,
+      onPressed: onSkipPressed,
     );
   }
 }
